@@ -19,7 +19,7 @@ def _rsi(close: pd.Series, window: int = 14) -> pd.Series:
     return 100 - 100 / (1 + rs)
 
 
-def _per_ticker(df: pd.DataFrame, horizon: int) -> pd.DataFrame:
+def _per_ticker(df: pd.DataFrame, horizons: tuple[int, ...]) -> pd.DataFrame:
     df = df.sort_values("date").copy()
     close = df["adj_close"]
     log_close = np.log(close)
@@ -49,12 +49,13 @@ def _per_ticker(df: pd.DataFrame, horizon: int) -> pd.DataFrame:
     df["ma_dist_20"] = close / close.rolling(20).mean() - 1
     df["ma_dist_50"] = close / close.rolling(50).mean() - 1
 
-    # Labels: forward log return over the horizon (targets, never features).
-    df[f"label_fwd_log_ret_{horizon}d"] = log_close.shift(-horizon) - log_close
-    df[f"label_direction_{horizon}d"] = (
-        (df[f"label_fwd_log_ret_{horizon}d"] > 0).astype("float")
-        .where(df[f"label_fwd_log_ret_{horizon}d"].notna())
-    )
+    # Labels: forward log return per horizon (targets, never features).
+    for h in horizons:
+        df[f"label_fwd_log_ret_{h}d"] = log_close.shift(-h) - log_close
+        df[f"label_direction_{h}d"] = (
+            (df[f"label_fwd_log_ret_{h}d"] > 0).astype("float")
+            .where(df[f"label_fwd_log_ret_{h}d"].notna())
+        )
     return df
 
 
@@ -64,32 +65,51 @@ def compute_price_features(
     sector_map: dict[str, str] | None = None,
     sector_returns: pd.DataFrame | None = None,
     horizon: int = 5,
+    extra_horizons: tuple[int, ...] = (21,),
 ) -> pd.DataFrame:
     """prices: columns [ticker, date, adj_close, volume].
-    market_returns: [date, mkt_ret_1d, mkt_ret_21d] (e.g. SPY).
+    market_returns: [date, mkt_ret_1d, mkt_ret_21d] (e.g. SPY), optionally
+    with mkt_fwd_ret_{h}d columns used for market-neutral residual labels.
     sector_returns: [date, ticker(ETF), ret_21d] for sector-relative return.
     """
+    horizons = tuple(sorted({horizon, *extra_horizons}))
     # explicit iteration (not groupby.apply) so the ticker column is kept
     # across pandas versions
     out = pd.concat(
-        [_per_ticker(g, horizon) for _, g in prices.groupby("ticker", sort=False)],
+        [_per_ticker(g, horizons) for _, g in prices.groupby("ticker", sort=False)],
         ignore_index=True,
     )
 
     if market_returns is not None and not market_returns.empty:
         out = out.merge(market_returns, on="date", how="left")
-        # Rolling 63d market beta from daily log returns.
-        def _beta(g: pd.DataFrame) -> pd.Series:
+        # Forward market returns are future values: give them the label_
+        # prefix immediately so feature_columns() can never select them.
+        out = out.rename(columns={
+            c: f"label_{c}" for c in out.columns if c.startswith("mkt_fwd_ret_")
+        })
+        # Rolling 63d market beta from daily log returns. Explicit iteration
+        # (not groupby.apply) for stable behavior across pandas versions.
+        out = out.sort_values(["ticker", "date"])
+        betas = []
+        for _, g in out.groupby("ticker", sort=False):
             cov = g["ret_1d"].rolling(63).cov(g["mkt_ret_1d"])
             var = g["mkt_ret_1d"].rolling(63).var()
-            return cov / var.replace(0, np.nan)
-        out = out.sort_values(["ticker", "date"])
-        # index-aligned assignment (rolling preserves the group's index)
-        out["beta_63d"] = out.groupby("ticker", group_keys=False).apply(_beta)
+            betas.append(cov / var.replace(0, np.nan))
+        out["beta_63d"] = pd.concat(betas)  # index-aligned assignment
     else:
         out["mkt_ret_1d"] = np.nan
         out["mkt_ret_21d"] = np.nan
         out["beta_63d"] = np.nan
+
+    # Market-neutral residual labels: what the stock did beyond its beta
+    # exposure to the market move. Removes the market-noise component that
+    # dominates raw returns, so models learn stock selection, not beta.
+    for h in horizons:
+        fwd_col = f"label_mkt_fwd_ret_{h}d"
+        if fwd_col in out.columns:
+            out[f"label_fwd_resid_ret_{h}d"] = (
+                out[f"label_fwd_log_ret_{h}d"] - out["beta_63d"].fillna(1.0) * out[fwd_col]
+            )
 
     # Sector-relative 21d return.
     out["sector_rel_ret_21d"] = np.nan

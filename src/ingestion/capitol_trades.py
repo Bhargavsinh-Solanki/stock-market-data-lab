@@ -127,9 +127,18 @@ def _upsert_dimensions(con: duckdb.DuckDBPyConnection, trades: pd.DataFrame) -> 
     insert_ignore_df(con, "issuers", issuers)
 
 
-def run(con: duckdb.DuckDBPyConnection, max_pages: int | None = None) -> IngestionResult:
-    """Fetch recent trades incrementally. Stops early once a full page of
-    already-seen trades is encountered."""
+def run(
+    con: duckdb.DuckDBPyConnection,
+    max_pages: int | None = None,
+    stop_on_duplicates: bool = True,
+) -> IngestionResult:
+    """Fetch trades incrementally (newest first).
+
+    stop_on_duplicates=True (daily mode): stop once a full page of
+    already-seen trades appears — everything older is already stored.
+    stop_on_duplicates=False (backfill mode): keep paging past known trades
+    to reach older history that was never fetched.
+    """
     settings = get_settings()
     result = IngestionResult(source=SOURCE)
     if not settings.enable_capitol_trades:
@@ -176,9 +185,11 @@ def run(con: duckdb.DuckDBPyConnection, max_pages: int | None = None) -> Ingesti
                 result.inserted += insert_ignore_df(con, "political_trades", df)
                 _upsert_dimensions(con, df)
                 known.update(t["trade_hash"] for t in fresh)
-            elif page > 1:
+            elif page > 1 and stop_on_duplicates:
                 logger.info("Page %d fully duplicated; stopping incremental fetch.", page)
                 break
+            if page % 25 == 0:
+                logger.info("Backfill progress: page %d, %d trades stored so far", page, result.inserted)
 
     logger.info(result.summary())
     return result

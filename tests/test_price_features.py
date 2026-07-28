@@ -50,3 +50,47 @@ def test_multiple_tickers_do_not_bleed():
     feats = compute_price_features(pd.concat([a, b], ignore_index=True), horizon=5)
     first_b = feats[feats["ticker"] == "BBB"].sort_values("date").iloc[0]
     assert np.isnan(first_b["ret_1d"])  # no return computed across the ticker boundary
+
+
+def _market_returns(n: int = 300, seed: int = 99) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
+    dates = pd.bdate_range("2025-01-02", periods=n)
+    log_spy = pd.Series(np.cumsum(rng.normal(0.0003, 0.008, n)))
+    out = pd.DataFrame({
+        "date": dates,
+        "mkt_ret_1d": log_spy.diff(1).values,
+        "mkt_ret_21d": log_spy.diff(21).values,
+    })
+    for h in (5, 21):
+        out[f"mkt_fwd_ret_{h}d"] = (log_spy.shift(-h) - log_spy).values
+    return out
+
+
+def test_21d_labels_exist_alongside_5d():
+    feats = compute_price_features(_prices(), horizon=5, extra_horizons=(21,))
+    for col in ("label_fwd_log_ret_5d", "label_fwd_log_ret_21d",
+                "label_direction_5d", "label_direction_21d"):
+        assert col in feats.columns
+    # 21d labels lose the last 21 rows, not 5
+    s = feats.sort_values("date")
+    assert s["label_fwd_log_ret_21d"].tail(21).isna().all()
+    assert s["label_fwd_log_ret_21d"].iloc[-22] == s["label_fwd_log_ret_21d"].iloc[-22]  # not NaN
+
+
+def test_residual_label_is_raw_minus_beta_times_market():
+    feats = compute_price_features(_prices(), market_returns=_market_returns(), horizon=5)
+    ok = feats.dropna(subset=["label_fwd_resid_ret_5d", "beta_63d",
+                              "label_mkt_fwd_ret_5d", "label_fwd_log_ret_5d"])
+    assert len(ok) > 50
+    expected = ok["label_fwd_log_ret_5d"] - ok["beta_63d"] * ok["label_mkt_fwd_ret_5d"]
+    assert np.allclose(ok["label_fwd_resid_ret_5d"], expected)
+
+
+def test_forward_market_return_never_selectable_as_feature():
+    """The forward market return is a future value; it must carry the label_
+    prefix so feature_columns() excludes it."""
+    feats = compute_price_features(_prices(), market_returns=_market_returns(), horizon=5)
+    assert "mkt_fwd_ret_5d" not in feats.columns
+    assert "label_mkt_fwd_ret_5d" in feats.columns
+    from src.features.build import feature_columns
+    assert all(not c.startswith("label_") for c in feature_columns(feats))

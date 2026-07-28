@@ -86,6 +86,12 @@ def parse_size_range(raw: str | None) -> tuple[float | None, float | None]:
     if len(values) >= 2:
         return min(values[0], values[1]), max(values[0], values[1])
     if len(values) == 1:
+        # A lone value that equals a disclosure-bucket lower bound is a
+        # wrapped range with the upper bound lost (e.g. '$250,001 ' from a
+        # PDF line break) — restore the full bucket.
+        for lo, hi in DISCLOSURE_SIZE_BUCKETS.values():
+            if abs(values[0] - lo) < 1:
+                return lo, hi
         return values[0], values[0]
     return None, None
 

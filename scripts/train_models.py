@@ -52,9 +52,17 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--neural", choices=["NHITS", "TFT"], default=None,
                         help="Additionally train a neural model (optional deps).")
+    parser.add_argument(
+        "--target", choices=["neutral_5d", "raw_5d", "neutral_21d", "raw_21d"],
+        default="neutral_5d",
+        help="Training target: market-neutral residual return (default) or raw "
+             "log return, at a 5- or 21-trading-day horizon.",
+    )
     args = parser.parse_args()
 
     settings = get_settings()
+    kind, h_txt = args.target.split("_")
+    horizon = int(h_txt.rstrip("d"))
     con = get_connection()
     try:
         if not table_exists(con, "features_weekly"):
@@ -62,17 +70,23 @@ def main() -> int:
             return 1
         df = read_df(con, "SELECT * FROM features_weekly ORDER BY date")
         df["date"] = pd.to_datetime(df["date"])
-        label = f"label_fwd_log_ret_{settings.label_horizon_days}d"
-        dir_label = f"label_direction_{settings.label_horizon_days}d"
+        raw_label = f"label_fwd_log_ret_{horizon}d"
+        label = f"label_fwd_resid_ret_{horizon}d" if kind == "neutral" else raw_label
+        dir_label = f"label_direction_{horizon}d"
+        if label not in df.columns:
+            logger.error("Label %s missing — rerun scripts/run_feature_build.py "
+                         "(feature table predates this target).", label)
+            return 1
         feats = feature_columns(df)
-        logger.info("Training on %d rows, %d features", len(df), len(feats))
+        logger.info("Training on %d rows, %d features, target=%s", len(df), len(feats), label)
 
         # Weekly grid -> convert day-based walk-forward params to weeks.
+        # Embargo must cover the full label horizon (21d labels overlap 5 weeks).
         wf = dict(
             min_train=max(settings.walk_forward_min_train_days // 5, 30),
             test_size=max(settings.walk_forward_test_days // 5, 4),
             step=max(settings.walk_forward_step_days // 5, 4),
-            embargo=max(settings.walk_forward_embargo_days // 5, 1),
+            embargo=max(-(-horizon // 5), settings.walk_forward_embargo_days // 5, 1),
         )
 
         candidates = list(BASELINES) + MODEL_NAMES
@@ -97,8 +111,10 @@ def main() -> int:
         final_clf = fit_final_model(df, feats, dir_label, clf_name, task="classification")
         reg_path = models_dir / "best_regressor.joblib"
         clf_path = models_dir / "direction_classifier.joblib"
-        joblib.dump({"model": final_reg, "features": feats, "name": best_name}, reg_path)
-        joblib.dump({"model": final_clf, "features": feats, "name": clf_name}, clf_path)
+        joblib.dump({"model": final_reg, "features": feats, "name": best_name,
+                     "label": label, "horizon": horizon}, reg_path)
+        joblib.dump({"model": final_clf, "features": feats, "name": clf_name,
+                     "label": dir_label, "horizon": horizon}, clf_path)
 
         # Record every run.
         labeled = df.dropna(subset=[label])
@@ -110,7 +126,7 @@ def main() -> int:
             res["run_id"] = run_id
             run_rows.append({
                 "run_id": run_id,
-                "model_name": name,
+                "model_name": f"{name}[{args.target}]" if res["task"] == "regression" else name,
                 "task": res["task"],
                 "trained_at": utcnow(),
                 "train_start": labeled["date"].min().date(),
@@ -125,12 +141,19 @@ def main() -> int:
             })
         insert_ignore_df(con, "model_training_runs", pd.DataFrame(run_rows))
 
-        # Backtest best model's OOF predictions vs SPY.
+        # Backtest best model's OOF predictions vs SPY. The portfolio always
+        # realizes RAW returns — even when the model ranks by residual return,
+        # what you'd earn holding the stocks is the actual return.
         spy = read_df(con, "SELECT date, adj_close FROM prices_daily WHERE ticker='SPY' ORDER BY date")
         spy["date"] = pd.to_datetime(spy["date"])
-        spy["ret"] = np.log(spy["adj_close"]).shift(-settings.label_horizon_days) - np.log(spy["adj_close"])
+        spy["ret"] = np.log(spy["adj_close"]).shift(-horizon) - np.log(spy["adj_close"])
+        oof_bt = best["oof"]
+        if label != raw_label:
+            oof_bt = oof_bt.merge(
+                df[["ticker", "date", raw_label]], on=["ticker", "date"], how="left"
+            )
         report = run_backtest(
-            best["oof"], label_col=label, top_k=settings.backtest_top_k,
+            oof_bt, label_col=raw_label, top_k=settings.backtest_top_k,
             cost_bps=settings.transaction_cost_bps, benchmark=spy[["date", "ret"]],
         )
         insert_ignore_df(con, "backtest_results", pd.DataFrame([{
@@ -153,20 +176,26 @@ def main() -> int:
             "created_at": utcnow(),
         }]))
 
-        if args.neural:
-            try:
-                from src.models.neural import train_neural_model
-                daily = read_df(con, "SELECT * FROM features_daily")
-                daily["date"] = pd.to_datetime(daily["date"])
-                train_neural_model(daily, model_name=args.neural)
-                logger.info("Neural %s trained (forecasts logged; wire into ensemble as needed).", args.neural)
-            except ImportError as exc:
-                logger.warning("%s", exc)
-
         logger.info("Training complete. Best=%s saved to %s", best_name, reg_path)
-        return 0
     finally:
         con.close()
+
+    if args.neural:
+        # Runs AFTER our connection closes: the subprocess needs its own
+        # DuckDB connection and the file allows only one writer-mode process.
+        # Isolated subprocess on purpose: LightGBM and PyTorch each bundle
+        # their own OpenMP runtime, and loading both into one process
+        # deadlocks on macOS (observed hang in torch clone ->
+        # __kmp_join_barrier). A fresh process only ever loads torch's.
+        import subprocess
+        logger.info("Launching neural %s training in an isolated process...", args.neural)
+        proc = subprocess.run(
+            [sys.executable, "-m", "src.models.neural", args.neural],
+            cwd=str(Path(__file__).resolve().parents[1]),
+        )
+        if proc.returncode != 0:
+            logger.warning("Neural training subprocess exited with code %d", proc.returncode)
+    return 0
 
 
 if __name__ == "__main__":

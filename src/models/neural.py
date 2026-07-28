@@ -93,6 +93,12 @@ def train_neural_model(
     """
     NeuralForecast, NHITS, TFT = _require_neuralforecast()
     accelerator = accelerator or detect_accelerator()
+    if accelerator != "cpu":
+        # GPU does the heavy lifting; keep torch's CPU ops single-threaded so
+        # they never enter an OpenMP parallel region (avoids the macOS
+        # dual-libomp deadlock if another OpenMP user shares the process).
+        import torch
+        torch.set_num_threads(1)
     logger.info("Neural training on accelerator=%s", accelerator)
     long_df = to_long_format(feats)
     exog = [c for c in HIST_EXOG if c in long_df.columns]
@@ -131,3 +137,31 @@ def ensemble_predictions(frames: list[pd.DataFrame], weights: list[float] | None
         merged = s.to_frame() if merged is None else merged.join(s, how="outer")
     out = (merged.sum(axis=1, min_count=1) / sum(weights)).rename("predicted_log_return")
     return out.reset_index()
+
+
+if __name__ == "__main__":
+    # Standalone entry point: `python -m src.models.neural NHITS`.
+    # train_models.py invokes this in a subprocess to keep torch's OpenMP
+    # runtime isolated from LightGBM's (see comment there).
+    import argparse
+
+    from src.db.engine import get_connection, read_df
+
+    parser = argparse.ArgumentParser(description="Train a neural forecaster on features_daily.")
+    parser.add_argument("model", nargs="?", default="NHITS", choices=["NHITS", "TFT"])
+    parser.add_argument("--max-steps", type=int, default=500)
+    args = parser.parse_args()
+
+    con = get_connection(read_only=True)
+    try:
+        daily = read_df(con, "SELECT * FROM features_daily")
+    finally:
+        con.close()
+    daily["date"] = pd.to_datetime(daily["date"])
+
+    _, forecasts = train_neural_model(daily, model_name=args.model, max_steps=args.max_steps)
+    top = forecasts.sort_values("predicted_log_return", ascending=False).head(10)
+    logger.info(
+        "Top 10 neural %s forecasts (research signals only, NOT investment advice):\n%s",
+        args.model, top.to_string(index=False),
+    )

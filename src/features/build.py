@@ -44,11 +44,16 @@ def build_features(write: bool = True) -> pd.DataFrame:
         # --- market / sector context ---
         market_ctx = compute_market_context(context_prices)
         spy = context_prices[context_prices["ticker"] == "SPY"].sort_values("date")
+        log_spy = np.log(spy["adj_close"])
         market_returns = pd.DataFrame({
             "date": spy["date"].values,
-            "mkt_ret_1d": np.log(spy["adj_close"]).diff(1).values,
-            "mkt_ret_21d": np.log(spy["adj_close"]).diff(21).values,
+            "mkt_ret_1d": log_spy.diff(1).values,
+            "mkt_ret_21d": log_spy.diff(21).values,
         })
+        # Forward market returns feed the market-neutral residual labels;
+        # they get the label_ prefix inside compute_price_features.
+        for h in sorted({settings.label_horizon_days, 21}):
+            market_returns[f"mkt_fwd_ret_{h}d"] = (log_spy.shift(-h) - log_spy).values
         etfs = sorted(set(SECTOR_ETFS.values()))
         sector_rets = []
         for etf in etfs:

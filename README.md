@@ -162,12 +162,17 @@ narrative ("why this stock is predicted to rise/fall next week") stored with eve
   systems anywhere in the codebase. The HTTP client refuses robots.txt-disallowed URLs
   (`src/utils/http.py`) and throttles to ~1 request / 2s with an identifying User-Agent and
   contact email.
-- **Official sources first.** House Clerk disclosure ZIPs are explicit public downloads. The
-  Senate eFD site requires accepting a usage agreement, so automated Senate ingestion ships
-  **disabled**; a manual-export loader is provided instead (`data/raw/senate/`).
-- **CapitolTrades** is used via its public JSON endpoint behind `ENABLE_CAPITOL_TRADES`; review
-  its terms of use for your deployment and disable the flag if your reading differs. Official
-  filings remain the source of record.
+- **Official sources are the source of record.** House political trades come from the Clerk's
+  public disclosure system: the yearly filing index ZIP plus per-filing PTR PDFs, whose
+  transaction tables are parsed by `ingest_ptr_transactions` (electronic filings only; paper
+  scans are recorded as skipped, never silently dropped). The Senate eFD site requires
+  accepting a usage agreement, so automated Senate ingestion ships **disabled**; a
+  manual-export loader is provided instead (`data/raw/senate/`).
+- **CapitolTrades ships disabled** (`ENABLE_CAPITOL_TRADES=false`): its API host's robots.txt
+  is `Disallow: /` for all agents, and the site sits behind an anti-bot checkpoint. Under this
+  project's rules (no robots.txt or anti-bot circumvention) it is not usable as an automated
+  source — the compliance client refuses the fetches. The ingester remains only in case its
+  access policy changes.
 - **yfinance** is a research-grade convenience; for production SLAs use a licensed feed
   (Polygon/Tiingo/EODHD) behind the same `market_prices.py` interface.
 - **Global sources** (free, keyless, robots-checked, rate-limited): the official ECB Data

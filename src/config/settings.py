@@ -118,7 +118,10 @@ class Settings(BaseSettings):
     max_retries: int = 3
 
     # --- source toggles ---
-    enable_capitol_trades: bool = True
+    # CapitolTrades ships disabled: bff.capitoltrades.com robots.txt is
+    # 'Disallow: /' for all agents, so the compliance client refuses every
+    # fetch. Official House PTR ingestion (below) is the source of record.
+    enable_capitol_trades: bool = False
     enable_house_disclosures: bool = True
     enable_senate_disclosures: bool = False  # eFD flow is gated; opt in explicitly
     capitol_trades_pages: int = 5

@@ -58,10 +58,14 @@ def main() -> int:
             if clf is not None else np.full(len(snap), np.nan)
         )
 
-        # Interval width from the best run's OOF residual std.
+        horizon = int(reg.get("horizon", settings.label_horizon_days))
+        is_market_relative = "resid" in str(reg.get("label", ""))
+
+        # Interval width from the best run's OOF residual std (run names may
+        # carry a [target] suffix, e.g. 'ridge[neutral_5d]').
         row = con.execute(
             "SELECT residual_std FROM model_training_runs "
-            "WHERE model_name = ? AND residual_std IS NOT NULL "
+            "WHERE model_name LIKE ? || '%' AND residual_std IS NOT NULL "
             "ORDER BY trained_at DESC LIMIT 1", [reg["name"]],
         ).fetchone()
         residual_std = float(row[0]) if row and row[0] else float(np.nanstd(pred) or 0.05)
@@ -72,7 +76,7 @@ def main() -> int:
 
         shap_df = shap_values_for(reg["model"], X, reg["features"])
         run_row = con.execute(
-            "SELECT run_id FROM model_training_runs WHERE model_name = ? "
+            "SELECT run_id FROM model_training_runs WHERE model_name LIKE ? || '%' "
             "ORDER BY trained_at DESC LIMIT 1", [reg["name"]],
         ).fetchone()
 
@@ -83,13 +87,15 @@ def main() -> int:
                 shap_df.iloc[i] if shap_df is not None else None,
                 r, top_n=3,
             )
+            if is_market_relative:
+                explanation = "Market-relative forecast (vs beta-adjusted market): " + explanation
             rows.append({
                 "prediction_id": stable_hash("pred", r["ticker"], as_of.date(), reg["name"]),
                 "run_id": run_row[0] if run_row else None,
                 "model_name": reg["name"],
                 "ticker": r["ticker"],
                 "as_of_date": as_of.date(),
-                "horizon_days": settings.label_horizon_days,
+                "horizon_days": horizon,
                 "predicted_log_return": float(pred[i]),
                 "predicted_direction_prob": float(proba_up[i]) if not np.isnan(proba_up[i]) else None,
                 "pred_lower": float(pred[i] - Z_80 * residual_std),

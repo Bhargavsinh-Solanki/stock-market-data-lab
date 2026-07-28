@@ -31,6 +31,14 @@ class TestParseSizeRange:
         assert parse_size_range(None) == (None, None)
         assert parse_size_range("unknown") == (None, None)
 
+    def test_truncated_bucket_lower_bound_restores_full_bucket(self):
+        """PDF line wraps can cut '$250,001 - $500,000' down to '$250,001'."""
+        assert parse_size_range("$250,001 ") == (250_001, 500_000)
+        assert parse_size_range("$15,001") == (15_001, 50_000)
+
+    def test_non_bucket_single_value_stays_exact(self):
+        assert parse_size_range("$7,500") == (7_500, 7_500)
+
 
 class TestSizeMidpoint:
     def test_exact_value_wins(self):
