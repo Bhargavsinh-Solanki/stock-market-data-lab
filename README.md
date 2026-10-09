@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **17 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **18 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -20,7 +20,7 @@ It's built as **17 small, heavily commented lessons**, each one adding a new cod
 |---|---|
 | **Market data** | Historical daily and 1-minute bars, latest trades, news headlines, live websocket stream |
 | **Web crawling** | Own polite crawler: Alpaca + Yahoo Finance RSS into a growing news archive, robots.txt-aware article text extraction |
-| **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment vs price moves |
+| **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment (word list and FinBERT AI) vs price moves |
 | **Backtesting & statistics** | Moving-average strategy vs buy & hold, trading costs, train/test split, shuffle (permutation) tests across 12 stocks |
 | **Paper trading** | Market and limit orders, a dry-run-first bot with a watchlist and decision log |
 | **Dashboard** | Streamlit app with live-updating intraday chart, account value, positions and bot log |
@@ -41,6 +41,9 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 4. **"Good news today → price up tomorrow" is luck.** Apple looked convincing (+0.64% next day,
    p = 0.013), but across 12 stocks only **1 of 12** passed, about what pure chance produces
    (12 × 5% ≈ 0.6). A classic case of the multiple-testing trap.
+5. **A real AI model didn't change that.** FinBERT, run locally, read headlines far better than the
+   word list (it wasn't fooled by "…Earnings Beat" in a negative story), yet its "good news" days
+   predicted the next day for **0 of 12** stocks. Better reading ≠ a trading edge.
 
 <table>
 <tr>
@@ -104,12 +107,22 @@ python step8_bot.py --trade   # sends the paper orders
 python step9_report.py        # report card for the paper account
 ```
 
+### Run the crawler automatically (optional)
+macOS has a built-in scheduler called **cron**. To grow the news archive every 2 hours on weekdays,
+run `crontab -e`, paste this one line (change the folder path if yours differs), save and close:
+```
+0 */2 * * 1-5 cd ~/Github/global-political-trades-forecast && .venv/bin/python step17_news_crawler.py >> data/crawler.log 2>&1
+```
+Check it's there with `crontab -l`. Remove it again with `crontab -e` (delete the line).
+Cron skips runs while the Mac is asleep or off, which is fine: the next run catches up on new headlines.
+
 ## Project structure
 
 ```
 ├── helpers.py                # shared tools: Alpaca clients, data download, backtest maths
 ├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
-├── step1_connect.py … step17_news_crawler.py   # the lessons (see below)
+├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
+├── step1_connect.py … step18_ai_sentiment.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live section added in lesson 14)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
@@ -140,6 +153,7 @@ python step9_report.py        # report card for the paper account
 | 15 | `step15_sentiment.py` | Scoring headlines as good/bad news: sets, regex, `.apply()`, same-day vs next-day tests |
 | 16 | `step16_luck_test.py` | Real or luck? Shuffle tests, p-values, multiple testing: numpy, random seeds, simulation |
 | 17 | `step17_news_crawler.py` | Your own polite web crawler and a growing news archive: classes, XML/RSS, HTTP, de-duplication |
+| 18 | `step18_ai_sentiment.py` | A free AI (FinBERT) reads the news on your Mac: pre-trained models, probabilities, mocks, caching |
 
 ## Built with
 
@@ -215,6 +229,11 @@ GitHub Actions
 - **Class**: a bundle of data and the functions that work on it (e.g. `PoliteFetcher`).
 - **Hash**: a short fingerprint of some text; the same text always gives the same hash.
 - **De-duplication**: making sure the same item is never stored twice.
+- **Pre-trained model**: an AI someone else already trained; you just use it ("inference").
+- **Probability**: how sure the model is, from 0% to 100% (e.g. "92% positive").
+- **Mock**: a fake stand-in used in tests (here, a fake FinBERT) so tests are fast and predictable.
+- **Lazy loading**: only loading something heavy at the moment it's first needed.
+- **cron**: the Mac/Linux built-in scheduler that runs commands at set times.
 - **Regular expression (regex)**: a pattern for finding text, e.g. `[a-z]+` means "a run of letters".
 - **Bot / dry run / watchlist / log**: a program that trades by itself / a rehearsal that sends nothing / the stocks it may trade / its record of every decision.
 

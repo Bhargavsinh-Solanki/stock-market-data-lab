@@ -15,5 +15,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+      # The normal Linux torch download is ~2-3 GB (graphics card support). The tests use a
+      # fake AI model, so the small CPU-only build is plenty - install it first.
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
       - run: pip install -r requirements.txt
       - run: pytest -v
