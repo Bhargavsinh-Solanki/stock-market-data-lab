@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **16 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **17 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -19,6 +19,7 @@ It's built as **16 small, heavily commented lessons**, each one adding a new cod
 | Area | Highlights |
 |---|---|
 | **Market data** | Historical daily and 1-minute bars, latest trades, news headlines, live websocket stream |
+| **Web crawling** | Own polite crawler: Alpaca + Yahoo Finance RSS into a growing news archive, robots.txt-aware article text extraction |
 | **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment vs price moves |
 | **Backtesting & statistics** | Moving-average strategy vs buy & hold, trading costs, train/test split, shuffle (permutation) tests across 12 stocks |
 | **Paper trading** | Market and limit orders, a dry-run-first bot with a watchlist and decision log |
@@ -62,6 +63,8 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 - **Trading costs** are included in backtests (0.1% per switch).
 - **Out-of-sample testing.** Strategy settings are chosen on old data and judged on newer data.
 - **Luck checks.** Patterns are shuffle-tested against 10,000 random picks, then re-checked on 12 stocks.
+- **Polite crawling.** The crawler obeys robots.txt, waits between visits, identifies itself, never
+  re-downloads a page, and skips sites whose terms forbid scraping.
 - **Safety.** All trading code is locked to the paper account. The bot dry-runs by default and only
   touches symbols on its watchlist. API keys stay in `.env`, which is never committed.
 
@@ -105,9 +108,10 @@ python step9_report.py        # report card for the paper account
 
 ```
 ├── helpers.py                # shared tools: Alpaca clients, data download, backtest maths
-├── step1_connect.py … step16_luck_test.py   # the lessons (see below)
+├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
+├── step1_connect.py … step17_news_crawler.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live section added in lesson 14)
-├── tests/test_helpers.py     # unit tests on fake data
+├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
 ├── docs/images/              # charts used in this README
 ├── data/                     # generated CSVs, charts, logs (not committed)
@@ -135,6 +139,7 @@ python step9_report.py        # report card for the paper account
 | 14 | `step11_dashboard.py` + repo | Live dashboard section (fragments, polling vs streaming); CI, licence, portfolio README |
 | 15 | `step15_sentiment.py` | Scoring headlines as good/bad news: sets, regex, `.apply()`, same-day vs next-day tests |
 | 16 | `step16_luck_test.py` | Real or luck? Shuffle tests, p-values, multiple testing: numpy, random seeds, simulation |
+| 17 | `step17_news_crawler.py` | Your own polite web crawler and a growing news archive: classes, XML/RSS, HTTP, de-duplication |
 
 ## Built with
 
@@ -160,6 +165,11 @@ GitHub Actions
 - **Polling**: asking "anything new?" again and again on a timer.
 - **Unix timestamp**: a date stored as seconds since 1 January 1970.
 - **SSL certificate**: a digital ID card that proves a website is who it says it is.
+- **RSS feed**: a list of a site's newest stories, written in XML, meant to be read by programs.
+- **Crawler (scraper)**: a program that visits web pages and saves information from them.
+- **robots.txt**: a website's rules for robots: which pages crawlers may and may not visit.
+- **User-Agent**: the name badge a program shows a website when it visits.
+- **HTTP status code**: a website's reply code: 200 = OK, 403 = forbidden, 404 = not found.
 
 **Investing & trading**
 - **Paper trading**: a practice account with fake money.
@@ -202,6 +212,9 @@ GitHub Actions
 - **NumPy**: a library for fast maths on whole lists of numbers at once.
 - **Random seed**: a starting number that makes "random" results repeatable.
 - **Histogram**: a bar chart of how often each value came up.
+- **Class**: a bundle of data and the functions that work on it (e.g. `PoliteFetcher`).
+- **Hash**: a short fingerprint of some text; the same text always gives the same hash.
+- **De-duplication**: making sure the same item is never stored twice.
 - **Regular expression (regex)**: a pattern for finding text, e.g. `[a-z]+` means "a run of letters".
 - **Bot / dry run / watchlist / log**: a program that trades by itself / a rehearsal that sends nothing / the stocks it may trade / its record of every decision.
 

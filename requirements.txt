@@ -4,3 +4,4 @@ pandas           # Turns data into neat tables (like Excel inside Python)
 matplotlib       # Draws charts and graphs
 pytest           # Runs our automated tests
 streamlit        # Turns a Python script into a web dashboard
+trafilatura      # Pulls the article text out of a web page (Lesson 17 crawler)
