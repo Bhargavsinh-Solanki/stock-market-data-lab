@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **27 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **28 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -51,6 +51,9 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 7. **Risk is predictable; returns aren't.** Ranking 22 stocks by volatility, last year's order matched
    this year's with an average rank correlation of **+0.86**. Ranking them by return: **0.00**, swinging
    from −0.86 to +0.61. A calmer what-if mix was calmer in **6 of 6** years, but made more in only 2.
+8. **So I forecast risk, not returns.** In 1,400 walk-forward checks on 25 stocks and funds, a simple
+   3-month volatility forecast ranked next month's bumpiness with a rank correlation of **+0.70**
+   (average miss 8 points). Last month's return predicted next month's return at **−0.03**.
 
 <table>
 <tr>
@@ -69,6 +72,9 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 </tr>
 <tr>
 <td colspan="2"><img src="docs/images/year_by_year.png" alt="Year-by-year: volatility carries over between years, returns do not"></td>
+</tr>
+<tr>
+<td colspan="2"><img src="docs/images/risk_forecast.png" alt="Forecast vs actual volatility (rank corr +0.70) next to last vs next month's return (-0.03)"></td>
 </tr>
 </table>
 
@@ -168,7 +174,8 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 ├── report.py                 # daily report: market moves, your rule checks, headlines, HTML
 ├── emailer.py                # sends email over SMTP using settings from .env
 ├── paper_bot.py              # the paper bot's decision table (buy / hold / sell / stay out)
-├── step1_connect.py … step27_paper_bot.py   # the lessons (see below)
+├── risk_forecast.py          # volatility forecasts (windows + EWMA) and walk-forward evaluation
+├── step1_connect.py … step28_risk_forecast.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live: lesson 14, health tab: 21, what-if tab: 22)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
@@ -210,6 +217,7 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 | 25 | `step25_etf_transition.py` | Planner for a gradual move from stocks to ETFs: monthly orders, fee comparison, risk along the path |
 | 26 | `step26_daily_email.py` | Daily email report: HTML, SMTP and App Passwords, escaping, fake servers in tests, safe-by-default |
 | 27 | `step27_paper_bot.py` | Paper-trading bot that emails its decisions: pure decision functions, cash check, combining modules |
+| 28 | `step28_risk_forecast.py` | Forecasting next month's volatility: walk-forward testing, EWMA, risk vs return forecasts |
 
 ## Built with
 
@@ -262,6 +270,9 @@ GitHub Actions
 - **UCITS**: the EU standard for funds; EU investors usually buy UCITS ETFs rather than US-listed ones.
 - **Order fee**: what a platform charges per buy or sell; many small orders can add up to a big share of a small portfolio.
 - **Persistence**: whether something stays similar from one period to the next (volatility does; returns don't).
+- **Walk-forward test**: forecast, wait, check, repeat - only ever using data from before each forecast.
+- **EWMA**: an average where recent days count more and older days fade away ("RiskMetrics", λ = 0.94).
+- **Risk forecast**: a guess of how much prices may swing - not which way.
 - **Year to date (YTD)**: from 1 January until today - an unfinished year.
 - **Stock split**: a company turns each share into several cheaper ones (e.g. 1 → 10). Raw prices drop, but nobody loses money.
 - **Adjusted prices**: old prices rewritten to account for splits and dividends, so charts and returns stay honest.
