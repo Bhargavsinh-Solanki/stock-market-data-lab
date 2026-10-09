@@ -26,6 +26,13 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 | 8 | `step8_bot.py` | A dry-run-first trading bot: dictionaries, try/except, log files |
 | 9 | `step9_report.py` | Daily report card: account value over time, positions, latest bot decisions |
 | 10 | `step10_using_helpers.py` | Your own module (`helpers.py`) and automated tests (`tests/`) |
+| 11 | `step11_dashboard.py` | A read-only web dashboard with Streamlit: widgets, caching, charts |
+
+### Opening the dashboard
+```bash
+streamlit run step11_dashboard.py
+```
+It opens at http://localhost:8501. Press Ctrl+C in the terminal to stop it.
 
 ### Running the tests
 ```bash
@@ -70,3 +77,7 @@ python step9_report.py
 - **Module**: a file of reusable tools that other files can `import`.
 - **Test**: a small program that checks other code gives the answer you already know is right.
 - **Assert**: "this must be true" - if it isn't, the test fails.
+- **Dashboard**: a page that shows your key numbers and charts at a glance.
+- **Widget**: an interactive control on a page - slider, text box, button, dropdown.
+- **Caching**: remembering a result for a while so you don't fetch it again on every click.
+- **localhost**: your own computer acting as a website, visible only to you.

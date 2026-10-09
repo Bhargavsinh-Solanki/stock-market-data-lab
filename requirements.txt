@@ -3,3 +3,4 @@ python-dotenv    # Reads our secret keys from the .env file
 pandas           # Turns data into neat tables (like Excel inside Python)
 matplotlib       # Draws charts and graphs
 pytest           # Runs our automated tests
+streamlit        # Turns a Python script into a web dashboard
