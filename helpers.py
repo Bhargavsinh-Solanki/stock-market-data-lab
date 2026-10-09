@@ -66,11 +66,14 @@ def live_stream():
     return StockDataStream(*_keys(), feed=DataFeed.IEX)
 
 
-def daily_closes(symbols, days=365):
+def daily_closes(symbols, days=365, keep_gaps=False):
     """
     Download daily closing prices.
     One symbol ("AAPL")        -> a single column of prices (a Series)
     Several (["AAPL", "SPY"])  -> a table with one column per symbol
+    keep_gaps=False: keep only days where EVERY stock has a price (simple to work with)
+    keep_gaps=True:  keep every day; a stock with no price that day (not listed yet,
+                     or no data at all) gets an empty value (NaN) instead (Lesson 24)
     """
     bars = data_client().get_stock_bars(
         StockBarsRequest(
@@ -83,7 +86,10 @@ def daily_closes(symbols, days=365):
     )
     if isinstance(symbols, str):
         return bars.df.loc[symbols]["close"]
-    return bars.df["close"].unstack(level="symbol")[symbols].dropna()
+    table = bars.df["close"].unstack(level="symbol")
+    if keep_gaps:
+        return table.reindex(columns=symbols)  # a symbol with no data at all -> an empty column
+    return table[symbols].dropna()
 
 
 def latest_session_minutes(symbol):

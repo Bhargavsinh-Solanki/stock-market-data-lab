@@ -13,3 +13,6 @@ __pycache__/
 
 # Data and charts we create (we can always re-download them)
 data/
+
+# Your REAL portfolio - private, never uploaded (see my_portfolio.example.csv)
+my_portfolio.csv

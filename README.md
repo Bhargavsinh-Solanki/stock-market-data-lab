@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **22 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **24 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -47,6 +47,9 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 6. **Diversification is the closest thing to a free lunch.** Across 2,000 random portfolios each, going
    from 1 to 20 stocks cut volatility by ~40% and lifted the *worst* 3-year result from −14% to +99%.
    5 tech stocks were twice as bumpy as 5 stocks from 5 different sectors (24% vs 12% volatility).
+7. **Risk is predictable; returns aren't.** Ranking 22 stocks by volatility, last year's order matched
+   this year's with an average rank correlation of **+0.86**. Ranking them by return: **0.00**, swinging
+   from −0.86 to +0.61. A calmer what-if mix was calmer in **6 of 6** years, but made more in only 2.
 
 <table>
 <tr>
@@ -62,6 +65,9 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 </tr>
 <tr>
 <td colspan="2"><img src="docs/images/diversification.png" alt="Volatility vs number of stocks, and correlation heatmap of 22 stocks"></td>
+</tr>
+<tr>
+<td colspan="2"><img src="docs/images/year_by_year.png" alt="Year-by-year: volatility carries over between years, returns do not"></td>
 </tr>
 </table>
 
@@ -131,14 +137,15 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 ├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
 ├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
 ├── portfolio.py              # portfolio health check + what-if simulator calculations
-├── step1_connect.py … step20_portfolio_check.py   # the lessons (see below)
+├── step1_connect.py … step24_my_portfolio.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live: lesson 14, health tab: 21, what-if tab: 22)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
 ├── docs/images/              # charts used in this README
 ├── data/                     # generated CSVs, charts, logs (not committed)
 ├── requirements.txt
-└── .env.example              # template for your API keys
+├── .env.example              # template for your API keys
+└── my_portfolio.example.csv  # template for your real holdings (your my_portfolio.csv stays private)
 ```
 
 ## Lessons
@@ -167,6 +174,8 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 | 20 | `step20_portfolio_check.py` | Health check of your own paper portfolio: weights, covariance, risk shares, effective number of stocks |
 | 21 | `portfolio.py` + dashboard | Health check as a dashboard tab: separating calculations from display, dataclasses, tabs |
 | 22 | `portfolio.py` + dashboard | What-if simulator: sliders, session state, normalising weights, hindsight vs forecast |
+| 23 | `step23_year_by_year.py` | Year-by-year checks: grouping by year, rank (Spearman) correlation, does risk or return carry over? |
+| 24 | `step24_my_portfolio.py` | Health check of a real portfolio from a private CSV: keeping data out of git, monkeypatching, generalising code |
 
 ## Built with
 
@@ -212,6 +221,12 @@ GitHub Actions
 - **Position**: a stock you currently own. **Filled**: the order actually happened.
 - **Unrealized profit/loss**: how much a position is up or down on paper, before you sell.
 - **Hindsight**: judging with knowledge of what actually happened; a what-if on past prices isn't a forecast.
+- **ADR**: a US-traded certificate for a foreign company's shares (e.g. Bayer → BAYRY).
+- **IPO / listing**: when a company's shares start trading on a stock exchange; there's no price history before it.
+- **Currency (FX) risk**: if you invest in euros in US-dollar assets, the EUR/USD rate moves your result too.
+- **Hedge**: a holding that tends to move against the rest, so it can *reduce* total risk (a negative risk share).
+- **Persistence**: whether something stays similar from one period to the next (volatility does; returns don't).
+- **Year to date (YTD)**: from 1 January until today - an unfinished year.
 - **Stock split**: a company turns each share into several cheaper ones (e.g. 1 → 10). Raw prices drop, but nobody loses money.
 - **Adjusted prices**: old prices rewritten to account for splits and dividends, so charts and returns stay honest.
 - **Diversification**: spreading money over many investments so one bad one can't sink you.
@@ -231,6 +246,7 @@ GitHub Actions
 - **Train / test split**: choose settings on old data, then judge them on newer data they've never seen.
 - **Correlation**: a number from -1 to +1 showing how strongly two things move together.
 - **Correlation is not causation**: two things moving together doesn't prove one causes the other.
+- **Rank (Spearman) correlation**: correlation of the ORDER of things (1st, 2nd, 3rd...), ignoring exact sizes.
 - **Sentiment**: whether a piece of text sounds positive or negative.
 - **Noise**: random ups and downs that can look like a pattern, especially in small samples.
 - **Shuffle test (permutation test)**: compare your result with thousands of random picks to see if luck could explain it.
@@ -260,6 +276,8 @@ GitHub Actions
 - **Session state**: memory that survives when a Streamlit page re-runs (e.g. slider positions).
 - **Normalise**: scale numbers so they add up to a total, e.g. slider values → shares adding up to 100%.
 - **Floating-point error**: tiny leftovers in computer maths (0.1 + 0.2 = 0.30000000000000004).
+- **Recursion**: a function that calls itself; without a stopping point it runs until Python gives up.
+- **Monkeypatching**: temporarily swapping a function for a fake one in a test (e.g. no real download).
 - **Class**: a bundle of data and the functions that work on it (e.g. `PoliteFetcher`).
 - **Hash**: a short fingerprint of some text; the same text always gives the same hash.
 - **De-duplication**: making sure the same item is never stored twice.

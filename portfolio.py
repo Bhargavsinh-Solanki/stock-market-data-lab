@@ -1,5 +1,5 @@
 """
-portfolio.py - the portfolio health-check CALCULATIONS (Lessons 20-21).
+portfolio.py - the portfolio health-check CALCULATIONS (Lessons 20-24).
 
 This file only CALCULATES - it never prints and never draws. Two different
 "front ends" use it:
@@ -28,7 +28,9 @@ SECTOR = {
     "COST": "Consumer", "KO": "Consumer", "PEP": "Consumer", "HD": "Consumer",
     "JPM": "Finance", "BAC": "Finance", "GS": "Finance",
     "XOM": "Energy", "CVX": "Energy", "JNJ": "Health", "PFE": "Health", "CAT": "Industrial",
-    "SPY": "Fund: S&P 500", "QQQ": "Fund: Nasdaq 100",
+    "ORCL": "Tech", "ZS": "Tech", "MRVL": "Tech", "QBTS": "Tech",
+    "CEG": "Utilities", "BAYRY": "Health", "SPCX": "Industrial",
+    "SPY": "Fund: S&P 500", "QQQ": "Fund: Nasdaq 100", "URTH": "Fund: MSCI World",
 }
 
 
@@ -45,8 +47,9 @@ class HealthCheck:
     effective: float            # effective number of stocks
     correlations: pd.DataFrame  # every holding vs every other
     close_pairs: pd.Series      # pairs moving together (correlation > 0.7)
-    growth: pd.DataFrame        # "$100 became..." day by day: your mix vs just SPY
-    comparison: pd.DataFrame    # final value, volatility and biggest drop: your mix vs SPY
+    growth: pd.DataFrame        # "$100 became..." day by day: your mix vs the benchmark(s)
+    comparison: pd.DataFrame    # final value, volatility and biggest drop: your mix vs benchmarks
+    excluded: pd.Series = None  # holdings left out (too little price history): symbol -> value
 
 
 def normalise(weights):
@@ -81,32 +84,66 @@ def simulate(daily_returns, weights):
     }
 
 
-def health_check(days=365):
-    """Analyse the current paper portfolio. Returns a HealthCheck, or None if it's empty."""
-    client = trading_client()
-    account = client.get_account()
-    held = [p for p in client.get_all_positions() if p.asset_class.value == "us_equity"]
-    if not held:
-        return None
+def yearly_stats(daily_returns, weights):
+    """
+    The same mix, judged one CALENDAR YEAR at a time (Lesson 23).
+    Returns one row per year: return %, volatility %, biggest drop %, trading days.
+    """
+    daily = weighted_returns(daily_returns, normalise(weights))
+    rows = {}
+    for year, r in daily.groupby(daily.index.year):  # split the days into one bucket per year
+        value = 100 * (1 + r).cumprod()
+        rows[year] = {
+            "return_%": value.iloc[-1] - 100,
+            "volatility_%": annual_volatility(r),
+            "biggest_drop_%": biggest_drop(value),
+            "days": len(r),
+        }
+    return pd.DataFrame(rows).T
 
-    values = pd.Series({p.symbol: float(p.market_value) for p in held}).sort_values(ascending=False)
-    weights = values / values.sum()
 
-    symbols = list(weights.index) + (["SPY"] if "SPY" not in weights.index else [])
-    returns = daily_closes(symbols, days=days).pct_change().dropna()
+def current_weights():
+    """Your paper portfolio's stock positions as {symbol: share of invested money}."""
+    held = [p for p in trading_client().get_all_positions() if p.asset_class.value == "us_equity"]
+    values = pd.Series({p.symbol: float(p.market_value) for p in held}, dtype=float)
+    return (values / values.sum()).sort_values(ascending=False)
+
+
+def analyse(values, days=365, benchmarks=("SPY",), min_days=200, total=None):
+    """
+    The health check for ANY set of holdings (Lessons 20-24).
+    values:     money in each holding, e.g. {"SPY": 310, "NVDA": 593} - any currency
+    benchmarks: what to compare your mix with, e.g. ("SPY", "URTH")
+    min_days:   holdings with fewer days of prices than this (new listings, or no data
+                at all) are left out of the maths and reported in `excluded`
+    """
+    values = pd.Series(values, dtype=float).sort_values(ascending=False)
+    symbols = list(dict.fromkeys(list(values.index) + list(benchmarks)))  # no repeats, keep order
+    closes = daily_closes(symbols, days=days, keep_gaps=True)
+
+    days_of_data = closes.notna().sum()
+    usable = [s for s in values.index if days_of_data.get(s, 0) >= min_days]
+    excluded = values.drop(usable)
+    if not usable:
+        raise ValueError("None of the holdings has enough price history.")
+
+    columns = list(dict.fromkeys(usable + list(benchmarks)))
+    returns = closes[columns].dropna().pct_change().dropna()
+    weights = values[usable] / values[usable].sum()
 
     positions = pd.DataFrame({
-        "sector": [SECTOR.get(s, "Other") for s in weights.index],
-        "value_$": values,
+        "sector": [SECTOR.get(s, "Other") for s in usable],
+        "value_$": values[usable],
         "money_%": weights * 100,
         "risk_%": risk_shares(returns, weights),
-        "own_volatility_%": [annual_volatility(returns[s]) for s in weights.index],
+        "own_volatility_%": [annual_volatility(returns[s]) for s in usable],
     })
 
-    corr = returns[weights.index].corr()
+    corr = returns[usable].corr()
     pairs = corr.where(np.triu(np.ones(corr.shape, dtype=bool), k=1)).stack().dropna()
 
-    daily = {"Your mix": weighted_returns(returns, weights), "Just SPY": returns["SPY"]}
+    daily = {"Your mix": weighted_returns(returns, weights)}
+    daily.update({f"Just {b}": returns[b] for b in benchmarks})
     growth = pd.DataFrame({name: 100 * (1 + r).cumprod() for name, r in daily.items()})
     comparison = pd.DataFrame({
         name: {
@@ -118,7 +155,7 @@ def health_check(days=365):
     }).T
 
     return HealthCheck(
-        total=float(account.portfolio_value),
+        total=total if total is not None else values.sum(),
         invested=values.sum(),
         positions=positions,
         by_sector=positions.groupby("sector")["money_%"].sum().sort_values(ascending=False),
@@ -127,4 +164,15 @@ def health_check(days=365):
         close_pairs=pairs[pairs > 0.7].sort_values(ascending=False),
         growth=growth,
         comparison=comparison,
+        excluded=excluded,
     )
+
+
+def health_check(days=365):
+    """Analyse the current PAPER portfolio. Returns a HealthCheck, or None if it's empty."""
+    client = trading_client()
+    held = [p for p in client.get_all_positions() if p.asset_class.value == "us_equity"]
+    if not held:
+        return None
+    values = {p.symbol: float(p.market_value) for p in held}
+    return analyse(values, days=days, total=float(client.get_account().portfolio_value))
