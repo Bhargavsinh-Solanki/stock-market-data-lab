@@ -23,6 +23,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 | 5 | `step5_backtest.py` | Backtesting a moving-average rule vs buy & hold; avoiding look-ahead bias |
 | 6 | `step6_overfitting.py` | Trading costs, testing many settings, train/test split and overfitting |
 | 7 | `step7_paper_order.py` | Placing paper orders (market vs limit), checking positions and orders |
+| 8 | `step8_bot.py` | A dry-run-first trading bot: dictionaries, try/except, log files |
 
 ## Glossary
 - **API**: a "menu" a company offers so programs can ask it for data.
@@ -46,3 +47,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 - **Limit order**: buy/sell only at your price or better. You pick the price, but it may never fill.
 - **Position**: a stock you currently own.
 - **Filled**: the order actually happened.
+- **Bot**: a program that makes and carries out trading decisions by itself.
+- **Dry run**: a rehearsal - the bot shows what it would do but sends nothing.
+- **Watchlist**: the list of stocks the bot is allowed to trade.
+- **Log**: a file recording every decision, so you can look back later.
