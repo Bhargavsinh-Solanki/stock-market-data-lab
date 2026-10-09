@@ -19,7 +19,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from helpers import (  # noqa: E402
-    backtest, biggest_drop, grow_100, headline_sentiment, ma_rule_positions, trading_day_for,
+    backtest, biggest_drop, grow_100, headline_sentiment, ma_rule_positions, shuffle_test,
+    trading_day_for,
 )
 
 
@@ -128,3 +129,27 @@ def test_sentiment_whole_words_only():
 
 def test_sentiment_mixed_headline_cancels_out():
     assert headline_sentiment("Stock drops despite record profits") == 1  # -1 +1 +1
+
+
+# --- shuffle_test -------------------------------------------------------------------
+
+def test_shuffle_test_spots_a_real_effect():
+    # Days 0-9 are clearly bigger than days 10-99. Picking them by luck is very unlikely.
+    values = [10] * 10 + [0] * 90
+    chosen = [True] * 10 + [False] * 90
+    ours, _, p_value = shuffle_test(values, chosen, n_shuffles=2000)
+    assert ours == 10
+    assert p_value < 0.01
+
+
+def test_shuffle_test_shrugs_at_a_typical_pick():
+    # Our chosen days are exactly average, so about half of random picks beat them.
+    values = list(range(100))
+    chosen = [i % 2 == 0 for i in range(100)]  # every other day: average 49 vs overall 49.5
+    _, _, p_value = shuffle_test(values, chosen, n_shuffles=2000)
+    assert 0.3 < p_value < 0.8
+
+
+def test_shuffle_test_is_repeatable_with_a_seed():
+    values, chosen = list(range(50)), [i < 5 for i in range(50)]
+    assert shuffle_test(values, chosen, seed=1)[2] == shuffle_test(values, chosen, seed=1)[2]

@@ -16,13 +16,14 @@ import re
 from datetime import datetime, timedelta
 
 import certifi
+import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from alpaca.data.enums import DataFeed
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.historical.news import NewsClient
 from alpaca.data.live import StockDataStream
-from alpaca.data.requests import StockBarsRequest, StockLatestTradeRequest
+from alpaca.data.requests import NewsRequest, StockBarsRequest, StockLatestTradeRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.client import TradingClient
 
@@ -176,6 +177,56 @@ def headline_sentiment(text):
     """+1 for each positive word, -1 for each negative word. 0 = neutral or mixed."""
     words = re.findall(r"[a-z]+", text.lower())  # split into lowercase words, drop punctuation
     return sum(w in POSITIVE_WORDS for w in words) - sum(w in NEGATIVE_WORDS for w in words)
+
+
+def news_by_day(symbol, days=180, max_tickers=3):
+    """
+    Lessons 12 + 15 in one table: for each trading day with news,
+    the price move, the next day's move, the number of stories, and the mood.
+    Returns (headlines, table).
+    """
+    news = news_client().get_news(
+        NewsRequest(symbols=symbol, start=datetime.now() - timedelta(days=days))
+    ).df
+    news = news[news["symbols"].apply(len) <= max_tickers].copy()
+    news["score"] = news["headline"].apply(headline_sentiment)
+
+    close = daily_closes(symbol, days=days + 10)
+    close.index = close.index.tz_localize(None).normalize()
+    prices = pd.DataFrame({"move_%": close.pct_change() * 100})
+    prices["next_day_move_%"] = prices["move_%"].shift(-1)
+
+    news["trading_day"] = trading_day_for(news["created_at"], prices.index)
+    per_day = news.groupby("trading_day").agg(stories=("score", "size"), mood=("score", "mean"))
+    table = prices.join(per_day, how="inner").dropna(subset=["move_%"])
+    return news, table
+
+
+# --- Is it real or luck? (Lesson 16) -----------------------------------------------
+
+def shuffle_test(values, chosen, n_shuffles=10_000, seed=0):
+    """
+    How often would RANDOMLY picked days look as good as the days we chose?
+
+    values: a number for every day (e.g. next-day move)
+    chosen: True/False for every day (e.g. "was it a good-news day?")
+    Returns (our average, list of random averages, p-value).
+
+    p-value = the fraction of random picks that did at least as well as ours.
+      small (under 0.05)  -> hard to get by luck, probably a real effect
+      large               -> random days often do this well, so it may just be luck
+    """
+    values = np.asarray(values, dtype=float)
+    chosen = np.asarray(chosen, dtype=bool)
+    ours = values[chosen].mean()
+
+    rng = np.random.default_rng(seed)  # a seed makes the "random" results repeatable
+    k = chosen.sum()
+    random_averages = np.array([
+        rng.choice(values, size=k, replace=False).mean() for _ in range(n_shuffles)
+    ])
+    p_value = (random_averages >= ours).mean()
+    return ours, random_averages, p_value
 
 
 def biggest_drop(values):

@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **15 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **16 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -20,7 +20,7 @@ It's built as **15 small, heavily commented lessons**, each one adding a new cod
 |---|---|
 | **Market data** | Historical daily and 1-minute bars, latest trades, news headlines, live websocket stream |
 | **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment vs price moves |
-| **Backtesting** | Moving-average strategy vs buy & hold, trading costs, train/test split to expose overfitting |
+| **Backtesting & statistics** | Moving-average strategy vs buy & hold, trading costs, train/test split, shuffle (permutation) tests across 12 stocks |
 | **Paper trading** | Market and limit orders, a dry-run-first bot with a watchlist and decision log |
 | **Dashboard** | Streamlit app with live-updating intraday chart, account value, positions and bot log |
 | **Engineering** | Shared `helpers` module, unit tests with pytest, CI on GitHub Actions |
@@ -34,11 +34,12 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 2. **Optimising settings creates false confidence.** The best Tesla setting on training data
    turned $100 into $354. On unseen data, the same setting turned $100 into $76.
    **0 of 39** settings beat buy & hold out-of-sample.
-3. **News days are bigger move days, but that doesn't prove news causes the moves.**
-   On the busiest 20% of news days, AAPL and TSLA moved about 1.6–1.8× as much (correlation +0.38).
-4. **Headline sentiment didn't predict the next day.** A word-list score of each day's headlines had
-   almost no link to next-day moves (correlation +0.06 for AAPL, −0.09 for TSLA). Apple's "good news"
-   days looked promising (+0.64% next day), but Tesla showed the opposite, a sign of noise, not signal.
+3. **Busy news days really are bigger move days.** On the busiest 20% of news days, AAPL and TSLA moved
+   about 1.5× as much as on a typical day. A shuffle test confirmed this for **8 of 12 stocks** (p < 0.05), so it's
+   a repeatable effect, though it doesn't show whether news causes moves or moves cause news.
+4. **"Good news today → price up tomorrow" is luck.** Apple looked convincing (+0.64% next day,
+   p = 0.013), but across 12 stocks only **1 of 12** passed, about what pure chance produces
+   (12 × 5% ≈ 0.6). A classic case of the multiple-testing trap.
 
 <table>
 <tr>
@@ -49,6 +50,9 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 <td><img src="docs/images/compare.png" alt="Growth of $100 in AAPL, MSFT, TSLA and SPY"></td>
 <td><img src="docs/images/news.png" alt="AAPL news stories per day vs daily price move"></td>
 </tr>
+<tr>
+<td colspan="2"><img src="docs/images/luck_test.png" alt="Shuffle tests: real results vs 10,000 random picks of days"></td>
+</tr>
 </table>
 
 ## Things I was careful about
@@ -57,6 +61,7 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
   16:00 New York close is matched to the next trading day. Both are covered by unit tests.
 - **Trading costs** are included in backtests (0.1% per switch).
 - **Out-of-sample testing.** Strategy settings are chosen on old data and judged on newer data.
+- **Luck checks.** Patterns are shuffle-tested against 10,000 random picks, then re-checked on 12 stocks.
 - **Safety.** All trading code is locked to the paper account. The bot dry-runs by default and only
   touches symbols on its watchlist. API keys stay in `.env`, which is never committed.
 
@@ -100,7 +105,7 @@ python step9_report.py        # report card for the paper account
 
 ```
 ├── helpers.py                # shared tools: Alpaca clients, data download, backtest maths
-├── step1_connect.py … step15_sentiment.py   # the lessons (see below)
+├── step1_connect.py … step16_luck_test.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live section added in lesson 14)
 ├── tests/test_helpers.py     # unit tests on fake data
 ├── .github/workflows/        # CI: runs the tests on every push
@@ -129,6 +134,7 @@ python step9_report.py        # report card for the paper account
 | 13 | `step13_live.py` | Live streaming trades and 1-minute bars over a websocket: callbacks, async, timers |
 | 14 | `step11_dashboard.py` + repo | Live dashboard section (fragments, polling vs streaming); CI, licence, portfolio README |
 | 15 | `step15_sentiment.py` | Scoring headlines as good/bad news: sets, regex, `.apply()`, same-day vs next-day tests |
+| 16 | `step16_luck_test.py` | Real or luck? Shuffle tests, p-values, multiple testing: numpy, random seeds, simulation |
 
 ## Built with
 
@@ -179,6 +185,9 @@ GitHub Actions
 - **Correlation is not causation**: two things moving together doesn't prove one causes the other.
 - **Sentiment**: whether a piece of text sounds positive or negative.
 - **Noise**: random ups and downs that can look like a pattern, especially in small samples.
+- **Shuffle test (permutation test)**: compare your result with thousands of random picks to see if luck could explain it.
+- **p-value**: the share of random picks that did at least as well as yours. Under 0.05 = "unlikely to be luck".
+- **Multiple testing**: try enough ideas and some will pass by chance (about 1 in 20 at p < 0.05).
 
 **Coding**
 - **Module**: a file of reusable tools that other files can `import`.
@@ -190,6 +199,9 @@ GitHub Actions
 - **Caching**: remembering a result for a while so you don't fetch it again on every click.
 - **Fragment**: a part of a Streamlit page that can refresh on its own.
 - **Set**: a collection of unique items with very fast "is this in it?" checks.
+- **NumPy**: a library for fast maths on whole lists of numbers at once.
+- **Random seed**: a starting number that makes "random" results repeatable.
+- **Histogram**: a bar chart of how often each value came up.
 - **Regular expression (regex)**: a pattern for finding text, e.g. `[a-z]+` means "a run of letters".
 - **Bot / dry run / watchlist / log**: a program that trades by itself / a rehearsal that sends nothing / the stocks it may trade / its record of every decision.
 
