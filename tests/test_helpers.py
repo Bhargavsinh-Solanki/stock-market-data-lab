@@ -12,6 +12,7 @@ Run all tests with:   pytest
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -19,8 +20,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from helpers import (  # noqa: E402
-    annual_volatility, backtest, biggest_drop, grow_100, headline_sentiment, ma_rule_positions,
-    portfolio_returns, shuffle_test, trading_day_for,
+    annual_volatility, backtest, biggest_drop, effective_stocks, grow_100, headline_sentiment,
+    ma_rule_positions, portfolio_returns, risk_shares, shuffle_test, trading_day_for,
+    weighted_returns,
 )
 
 
@@ -174,3 +176,24 @@ def test_identical_stocks_give_no_benefit():
     returns["B"] = returns["A"]  # B always moves exactly like A
     together = annual_volatility(portfolio_returns(returns, ["A", "B"]))
     assert together == pytest.approx(annual_volatility(returns["A"]))
+
+
+def test_weighted_returns():
+    returns = pd.DataFrame({"A": [0.10, 0.00], "B": [0.00, 0.10]})
+    assert list(weighted_returns(returns, {"A": 0.75, "B": 0.25})) == pytest.approx([0.075, 0.025])
+
+
+def test_effective_stocks():
+    assert effective_stocks([0.25, 0.25, 0.25, 0.25]) == pytest.approx(4)
+    assert effective_stocks([0.97, 0.01, 0.01, 0.01]) == pytest.approx(1.06, abs=0.01)
+
+
+def test_risk_shares_add_up_and_favour_the_bumpy_stock():
+    rng = np.random.default_rng(0)
+    returns = pd.DataFrame({
+        "calm": rng.normal(0, 0.005, 500),   # small daily moves
+        "bumpy": rng.normal(0, 0.03, 500),   # big daily moves
+    })
+    shares = risk_shares(returns, {"calm": 0.5, "bumpy": 0.5})
+    assert shares.sum() == pytest.approx(100)
+    assert shares["bumpy"] > 90  # half the money, but nearly all the risk

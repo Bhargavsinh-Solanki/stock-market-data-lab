@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **19 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **20 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -22,7 +22,7 @@ It's built as **19 small, heavily commented lessons**, each one adding a new cod
 | **Web crawling** | Own polite crawler: Alpaca + Yahoo Finance RSS into a growing news archive, robots.txt-aware article text extraction |
 | **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment (word list and FinBERT AI) vs price moves |
 | **Backtesting & statistics** | Moving-average strategy vs buy & hold, trading costs, train/test split, shuffle (permutation) tests across 12 stocks |
-| **Paper trading** | Market and limit orders, a dry-run-first bot with a watchlist and decision log |
+| **Paper trading** | Market and limit orders, a dry-run-first bot with a watchlist and decision log, a read-only portfolio health check (money vs risk share, effective number of stocks, overlap) |
 | **Dashboard** | Streamlit app with live-updating intraday chart, account value, positions and bot log |
 | **Engineering** | Shared `helpers` module, unit tests with pytest, CI on GitHub Actions |
 
@@ -130,7 +130,7 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 ├── helpers.py                # shared tools: Alpaca clients, data download, backtest maths
 ├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
 ├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
-├── step1_connect.py … step19_diversification.py   # the lessons (see below)
+├── step1_connect.py … step20_portfolio_check.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live section added in lesson 14)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
@@ -163,6 +163,7 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 | 17 | `step17_news_crawler.py` | Your own polite web crawler and a growing news archive: classes, XML/RSS, HTTP, de-duplication |
 | 18 | `step18_ai_sentiment.py` | A free AI (FinBERT) reads the news on your Mac: pre-trained models, probabilities, mocks, caching |
 | 19 | `step19_diversification.py` | Diversification: random portfolios, annualised volatility, correlation heatmap, split-adjusted prices |
+| 20 | `step20_portfolio_check.py` | Health check of your own paper portfolio: weights, covariance, risk shares, effective number of stocks |
 
 ## Built with
 
@@ -213,6 +214,10 @@ GitHub Actions
 - **Equal weight**: the same amount of money in each stock.
 - **Sector**: a group of companies in the same industry (tech, energy, banks…), which tend to move together.
 - **Rotation**: money moving out of one group of stocks and into another, so they move in opposite directions.
+- **Weight**: a position's share of the portfolio's money (all weights add up to 100%).
+- **Risk share (risk contribution)**: how much of the portfolio's total bumpiness comes from one position.
+- **Effective number of stocks**: how many equal-sized positions a portfolio really behaves like (1 ÷ sum of squared weights).
+- **ETF / fund**: one share that holds many companies at once (SPY ≈ 500, QQQ ≈ 100).
 
 **Testing strategies**
 - **Backtest**: replaying a trading rule on old prices to see how it would have done.
@@ -243,6 +248,8 @@ GitHub Actions
 - **Histogram**: a bar chart of how often each value came up.
 - **Annualise**: turn a daily number into a yearly one (volatility: daily × √252 trading days).
 - **Heatmap**: a grid of coloured squares, where colour shows the size of each number.
+- **Covariance**: like correlation, but also counts how big the moves are.
+- **Matrix multiplication (`@`)**: combining every pair of rows and columns in one step.
 - **Class**: a bundle of data and the functions that work on it (e.g. `PoliteFetcher`).
 - **Hash**: a short fingerprint of some text; the same text always gives the same hash.
 - **De-duplication**: making sure the same item is never stored twice.

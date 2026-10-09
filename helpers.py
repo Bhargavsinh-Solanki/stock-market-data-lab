@@ -242,6 +242,37 @@ def portfolio_returns(daily_returns, symbols):
     return daily_returns[list(symbols)].mean(axis=1)
 
 
+def weighted_returns(daily_returns, weights):
+    """
+    Daily returns of a portfolio with FIXED weights, e.g. {"SPY": 0.6, "TSLA": 0.4}
+    = 60% of the money in SPY and 40% in TSLA (weights should add up to 1).
+    """
+    weights = pd.Series(weights, dtype=float)
+    return daily_returns[weights.index] @ weights  # @ = "multiply each column by its weight, then add"
+
+
+def effective_stocks(weights):
+    """
+    'How many equal-sized positions is this portfolio REALLY like?'
+    4 equal positions -> 4.0. One 97% position plus three tiny ones -> about 1.1.
+    Formula: 1 / sum of squared weights.
+    """
+    weights = pd.Series(weights, dtype=float)
+    return 1 / (weights ** 2).sum()
+
+
+def risk_shares(daily_returns, weights):
+    """
+    Each position's share of the portfolio's total risk (adds up to 100%).
+    A position can be 20% of the MONEY but 40% of the RISK if it's very bumpy
+    and moves together with the rest.
+    """
+    weights = pd.Series(weights, dtype=float)
+    cov = daily_returns[weights.index].cov()   # how each pair of stocks moves together
+    portfolio_variance = weights @ cov @ weights
+    return weights * (cov @ weights) / portfolio_variance * 100
+
+
 def annual_volatility(daily_returns):
     """
     How bumpy the ride is over a YEAR, in %. Daily ups and downs grow with the
