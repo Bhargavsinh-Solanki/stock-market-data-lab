@@ -25,6 +25,12 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 | 7 | `step7_paper_order.py` | Placing paper orders (market vs limit), checking positions and orders |
 | 8 | `step8_bot.py` | A dry-run-first trading bot: dictionaries, try/except, log files |
 | 9 | `step9_report.py` | Daily report card: account value over time, positions, latest bot decisions |
+| 10 | `step10_using_helpers.py` | Your own module (`helpers.py`) and automated tests (`tests/`) |
+
+### Running the tests
+```bash
+pytest
+```
 
 ### Daily routine (run by hand after the US market closes)
 ```bash
@@ -61,3 +67,6 @@ python step9_report.py
 - **Log**: a file recording every decision, so you can look back later.
 - **Unix timestamp**: a date stored as seconds since 1 January 1970 - how computers often store time.
 - **Unrealized profit/loss**: how much a position is up or down on paper, before you sell.
+- **Module**: a file of reusable tools that other files can `import`.
+- **Test**: a small program that checks other code gives the answer you already know is right.
+- **Assert**: "this must be true" - if it isn't, the test fails.

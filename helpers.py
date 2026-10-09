@@ -1,0 +1,95 @@
+"""
+helpers.py - our own MODULE (a file of reusable tools).
+
+Lessons 1-9 each copied the same setup code: load keys, make clients, download
+prices, run the backtest maths. Copying is risky: fix a bug in one file and the
+others still have it. So the shared pieces now live here, ONCE, and any file can use them:
+
+    from helpers import daily_closes, backtest
+
+This file does nothing when run on its own - it only DEFINES tools.
+The tests in tests/test_helpers.py check the maths parts automatically.
+"""
+
+import os
+from datetime import datetime, timedelta
+
+import pandas as pd
+from dotenv import load_dotenv
+from alpaca.data.enums import DataFeed
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.requests import StockBarsRequest
+from alpaca.data.timeframe import TimeFrame
+from alpaca.trading.client import TradingClient
+
+load_dotenv()
+
+
+# --- Talking to Alpaca ----------------------------------------------------------
+
+def _keys():
+    """Read the API keys from .env (the leading _ means 'for use inside this file')."""
+    key, secret = os.getenv("ALPACA_API_KEY"), os.getenv("ALPACA_SECRET_KEY")
+    if not key or "paste_your" in key:
+        raise SystemExit("No Alpaca keys found. Paste them into the .env file.")
+    return key, secret
+
+
+def trading_client():
+    """Phone line for account, positions and orders. Always the PAPER account."""
+    return TradingClient(*_keys(), paper=True)
+
+
+def data_client():
+    """Phone line for market data (prices)."""
+    return StockHistoricalDataClient(*_keys())
+
+
+def daily_closes(symbols, days=365):
+    """
+    Download daily closing prices.
+    One symbol ("AAPL")        -> a single column of prices (a Series)
+    Several (["AAPL", "SPY"])  -> a table with one column per symbol
+    """
+    bars = data_client().get_stock_bars(
+        StockBarsRequest(
+            symbol_or_symbols=symbols,
+            timeframe=TimeFrame.Day,
+            start=datetime.now() - timedelta(days=days),
+            feed=DataFeed.IEX,
+        )
+    )
+    if isinstance(symbols, str):
+        return bars.df.loc[symbols]["close"]
+    return bars.df["close"].unstack(level="symbol")[symbols].dropna()
+
+
+# --- Maths (no internet needed - this is what the tests check) -----------------
+
+def ma_rule_positions(close, ma_days):
+    """
+    True on the days the moving-average rule HOLDS the stock.
+    The decision made at day N's close is acted on during day N+1 (no peeking).
+    """
+    ma = close.rolling(ma_days).mean()
+    return (close > ma).shift(1, fill_value=False)
+
+
+def backtest(close, ma_days, cost=0.001):
+    """Daily returns of the moving-average rule, paying `cost` on every switch."""
+    in_market = ma_rule_positions(close, ma_days)
+    stock_return = close.pct_change().fillna(0)
+    switched = in_market != in_market.shift(1, fill_value=False)
+    return stock_return.where(in_market, 0.0) - switched * cost
+
+
+def grow_100(daily_returns):
+    """What $100 becomes after a series of daily returns (compounding)."""
+    return 100 * (1 + pd.Series(daily_returns)).prod()
+
+
+def biggest_drop(values):
+    """Worst fall from a high point to a later low, as a negative % (e.g. -25.0)."""
+    values = pd.Series(values, dtype=float)
+    peak = values.cummax()
+    return ((values - peak) / peak).min() * 100
