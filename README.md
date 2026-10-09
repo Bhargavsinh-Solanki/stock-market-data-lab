@@ -24,6 +24,14 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 | 6 | `step6_overfitting.py` | Trading costs, testing many settings, train/test split and overfitting |
 | 7 | `step7_paper_order.py` | Placing paper orders (market vs limit), checking positions and orders |
 | 8 | `step8_bot.py` | A dry-run-first trading bot: dictionaries, try/except, log files |
+| 9 | `step9_report.py` | Daily report card: account value over time, positions, latest bot decisions |
+
+### Daily routine (run by hand after the US market closes)
+```bash
+source .venv/bin/activate
+python step8_bot.py --trade
+python step9_report.py
+```
 
 ## Glossary
 - **API**: a "menu" a company offers so programs can ask it for data.
@@ -51,3 +59,5 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 - **Dry run**: a rehearsal - the bot shows what it would do but sends nothing.
 - **Watchlist**: the list of stocks the bot is allowed to trade.
 - **Log**: a file recording every decision, so you can look back later.
+- **Unix timestamp**: a date stored as seconds since 1 January 1970 - how computers often store time.
+- **Unrealized profit/loss**: how much a position is up or down on paper, before you sell.

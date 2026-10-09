@@ -98,6 +98,7 @@ def write_log(row):
 
 # --- Main program ----------------------------------------------------------------
 clock = trading.get_clock()
+run_time = f"{datetime.now():%Y-%m-%d %H:%M:%S}"  # one timestamp shared by this whole run
 mode = "TRADE (paper)" if really_trade else "DRY RUN (nothing will be sent)"
 print(f"Bot started {datetime.now():%Y-%m-%d %H:%M}  |  mode: {mode}")
 print(f"Market is {'OPEN' if clock.is_open else 'CLOSED'}\n")
@@ -143,7 +144,7 @@ for symbol, shares in WATCHLIST.items():
             print(f"      order sent, status: {order.status.value}")
 
         write_log({
-            "time": f"{datetime.now():%Y-%m-%d %H:%M:%S}",
+            "time": run_time,
             "symbol": symbol,
             "close": round(price, 2),
             "ma": round(ma, 2),
