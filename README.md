@@ -20,6 +20,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 | 2 | `step2_prices.py`  | Fetching the latest price and 30 days of daily prices |
 | 3 | `step3_save_and_chart.py` | Saving a year of prices to CSV, moving average, drawing a chart |
 | 4 | `step4_compare.py` | Lists, functions and loops; comparing returns and risk across stocks |
+| 5 | `step5_backtest.py` | Backtesting a moving-average rule vs buy & hold; avoiding look-ahead bias |
 
 ## Glossary
 - **API**: a "menu" a company offers so programs can ask it for data.
@@ -32,3 +33,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 - **Volatility (typical daily move)**: how much a price usually jumps per day. Bigger = bumpier ride.
 - **Biggest drop (max drawdown)**: the worst fall from a high point to a later low.
 - **Benchmark (SPY)**: a fund tracking the 500 biggest US companies; the "average market" to compare against.
+- **Backtest**: replaying a trading rule on old prices to see how it would have done.
+- **Signal**: the rule's decision for each day (own the stock or hold cash).
+- **Look-ahead bias**: accidentally using information you couldn't have had at the time. Makes results look too good.
+- **Compounding**: gains building on earlier gains, day after day.
