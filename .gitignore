@@ -10,3 +10,6 @@ __pycache__/
 
 # Mac junk
 .DS_Store
+
+# Data and charts we create (we can always re-download them)
+data/

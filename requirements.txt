@@ -1,3 +1,4 @@
 alpaca-py        # Alpaca's official Python library (talks to Alpaca for us)
 python-dotenv    # Reads our secret keys from the .env file
 pandas           # Turns data into neat tables (like Excel inside Python)
+matplotlib       # Draws charts and graphs
