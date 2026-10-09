@@ -27,6 +27,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 | 9 | `step9_report.py` | Daily report card: account value over time, positions, latest bot decisions |
 | 10 | `step10_using_helpers.py` | Your own module (`helpers.py`) and automated tests (`tests/`) |
 | 11 | `step11_dashboard.py` | A read-only web dashboard with Streamlit: widgets, caching, charts |
+| 12 | `step12_news.py` | News headlines vs price moves: joining tables, grouping, correlation, news timing |
 
 ### Opening the dashboard
 ```bash
@@ -81,3 +82,7 @@ python step9_report.py
 - **Widget**: an interactive control on a page - slider, text box, button, dropdown.
 - **Caching**: remembering a result for a while so you don't fetch it again on every click.
 - **localhost**: your own computer acting as a website, visible only to you.
+- **Join**: matching two tables row by row using a shared column, such as the date.
+- **Group by**: sorting rows into buckets (e.g. by day) and counting or averaging each bucket.
+- **Correlation**: a number from -1 to +1 showing how strongly two things move together.
+- **Correlation is not causation**: two things moving together doesn't prove one causes the other.

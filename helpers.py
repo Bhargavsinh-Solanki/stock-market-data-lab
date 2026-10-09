@@ -18,6 +18,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from alpaca.data.enums import DataFeed
 from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.historical.news import NewsClient
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.client import TradingClient
@@ -43,6 +44,11 @@ def trading_client():
 def data_client():
     """Phone line for market data (prices)."""
     return StockHistoricalDataClient(*_keys())
+
+
+def news_client():
+    """Phone line for news headlines."""
+    return NewsClient(*_keys())
 
 
 def daily_closes(symbols, days=365):
@@ -86,6 +92,26 @@ def backtest(close, ma_days, cost=0.001):
 def grow_100(daily_returns):
     """What $100 becomes after a series of daily returns (compounding)."""
     return 100 * (1 + pd.Series(daily_returns)).prod()
+
+
+def trading_day_for(published, trading_days):
+    """
+    Which trading day's price move could a news story have affected?
+
+    The US market closes at 16:00 New York time. A story published before the
+    close can move THAT day's price; a story after the close (or on a weekend)
+    can only move the NEXT trading day. Getting this wrong is look-ahead bias again.
+
+    published:    timestamps (any time zone)
+    trading_days: sorted dates the market was open
+    Returns the matching trading day for each story (NaT if it's after the last day).
+    """
+    ny = pd.DatetimeIndex(published).tz_convert("America/New_York")
+    day = ny.normalize().tz_localize(None)
+    day = day.where(ny.hour < 16, day + pd.Timedelta(days=1))  # after close -> next day
+    days = pd.DatetimeIndex(trading_days)
+    pos = days.searchsorted(day)  # first trading day on or after `day`
+    return pd.DatetimeIndex([days[p] if p < len(days) else pd.NaT for p in pos])
 
 
 def biggest_drop(values):

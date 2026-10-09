@@ -18,7 +18,7 @@ import pytest
 # Let this file find helpers.py, which lives one folder up.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from helpers import backtest, biggest_drop, grow_100, ma_rule_positions  # noqa: E402
+from helpers import backtest, biggest_drop, grow_100, ma_rule_positions, trading_day_for  # noqa: E402
 
 
 def fake_prices(values):
@@ -78,3 +78,30 @@ def test_backtest_charges_cost_on_each_switch():
 def test_backtest_earns_nothing_while_in_cash():
     close = fake_prices([10, 9, 8, 7, 6, 5])  # always below average -> always cash
     assert grow_100(backtest(close, ma_days=3)) == 100
+
+
+# --- trading_day_for (news timing) -------------------------------------------------
+
+def test_news_is_matched_to_the_right_trading_day():
+    # Thu 1 Oct and Fri 2 Oct, then Mon 5 Oct 2026 (the weekend is closed)
+    trading_days = pd.to_datetime(["2026-10-01", "2026-10-02", "2026-10-05"])
+    published = pd.to_datetime([
+        "2026-10-02 15:00",  # Friday before the close   -> Friday
+        "2026-10-02 17:00",  # Friday after the close    -> Monday
+        "2026-10-03 10:00",  # Saturday                  -> Monday
+        "2026-10-05 08:00",  # Monday before the open    -> Monday
+        "2026-10-05 18:00",  # after our last known day  -> no match
+    ]).tz_localize("America/New_York")
+
+    result = trading_day_for(published, trading_days)
+
+    expected = pd.to_datetime(["2026-10-02", "2026-10-05", "2026-10-05", "2026-10-05", None])
+    # .equals() treats two "no date" (NaT) values as matching; == would not.
+    assert result.equals(pd.DatetimeIndex(expected))
+
+
+def test_news_timing_works_with_utc_times():
+    # Alpaca sends UTC. 21:30 UTC on 1 Oct = 17:30 New York -> after the close -> next day.
+    trading_days = pd.to_datetime(["2026-10-01", "2026-10-02"])
+    published = pd.to_datetime(["2026-10-01 21:30"]).tz_localize("UTC")
+    assert trading_day_for(published, trading_days)[0] == pd.Timestamp("2026-10-02")
