@@ -19,6 +19,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 | 1 | `step1_connect.py` | Logging in to Alpaca with API keys |
 | 2 | `step2_prices.py`  | Fetching the latest price and 30 days of daily prices |
 | 3 | `step3_save_and_chart.py` | Saving a year of prices to CSV, moving average, drawing a chart |
+| 4 | `step4_compare.py` | Lists, functions and loops; comparing returns and risk across stocks |
 
 ## Glossary
 - **API**: a "menu" a company offers so programs can ask it for data.
@@ -27,3 +28,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 - **Bar / candle**: one time period summarised as Open, High, Low, Close, Volume.
 - **CSV**: a plain-text spreadsheet; opens in Excel, Numbers or Google Sheets.
 - **Moving average**: the average price over the last N days; smooths out noise to show the trend.
+- **Return**: how much an investment grew or shrank, in %.
+- **Volatility (typical daily move)**: how much a price usually jumps per day. Bigger = bumpier ride.
+- **Biggest drop (max drawdown)**: the worst fall from a high point to a later low.
+- **Benchmark (SPY)**: a fund tracking the 500 biggest US companies; the "average market" to compare against.
