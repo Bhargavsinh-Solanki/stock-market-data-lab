@@ -26,7 +26,7 @@ import streamlit as st
 from alpaca.trading.requests import GetPortfolioHistoryRequest
 
 from helpers import daily_closes, latest_session_minutes, latest_trade, trading_client
-from portfolio import health_check
+from portfolio import health_check, simulate
 
 LOG_FILE = "data/bot_log.csv"
 
@@ -68,6 +68,12 @@ def load_equity(period):
 @st.cache_data(ttl=600)
 def load_health_check():
     return health_check()  # the same calculations as step20, shared via portfolio.py
+
+
+@st.cache_data(ttl=3600)
+def load_returns(symbols):
+    """A year of daily returns. `symbols` is a tuple, because cached inputs must be unchangeable."""
+    return daily_closes(list(symbols), days=365).pct_change().dropna()
 
 
 @st.cache_data(ttl=300)
@@ -139,7 +145,7 @@ def live_section():
 
 # --- LESSON 21: TABS - separate pages inside one app -----------------------------------
 # Streamlit runs the code for EVERY tab on each refresh, so the slow health check is cached.
-overview_tab, health_tab = st.tabs(["📊 Overview", "🩺 Portfolio health"])
+overview_tab, health_tab, whatif_tab = st.tabs(["📊 Overview", "🩺 Portfolio health", "🧪 What-if"])
 
 with overview_tab:
     st.subheader(f"🔴 Live: {symbol} today")
@@ -268,3 +274,71 @@ with health_tab:
             }).style.format(precision=1),
             width="stretch",
         )
+
+
+# --- The What-if tab (Lesson 22) -----------------------------------------------------
+# SESSION STATE: st.session_state is a dictionary that SURVIVES re-runs. Normally every
+# variable is forgotten each time the script re-runs; anything in session_state is kept.
+# Each slider stores its value there (under key="w_SYMBOL"), so the reset button can
+# put them all back to your real mix.
+with whatif_tab:
+    st.caption("Drag the sliders to try a different mix. Uses the past year of prices, so it shows "
+               "what WOULD have happened (hindsight), not a forecast · educational, not financial advice")
+    check = load_health_check()
+    if check is None:
+        st.info("No stock positions in your paper account yet.")
+    else:
+        current = check.positions["money_%"].round(1)
+        extra = st.text_input("Add stocks to try (comma-separated)", "KO, XOM",
+                              help="They start at 0%. Drag their slider up to add them to the mix.")
+        extras = [x.strip().upper() for x in extra.split(",")
+                  if x.strip() and x.strip().upper() not in current.index]
+        symbols = list(current.index) + extras
+        defaults = {**current.to_dict(), **{x: 0.0 for x in extras}}
+
+        if st.button("↩️ Back to my current mix"):
+            for symbol_, value in defaults.items():
+                st.session_state[f"w_{symbol_}"] = value
+
+        columns = st.columns(4)
+        sliders = {}
+        for i, symbol_ in enumerate(symbols):
+            key = f"w_{symbol_}"
+            if key not in st.session_state:          # first time we see this stock
+                st.session_state[key] = defaults[symbol_]
+            sliders[symbol_] = columns[i % 4].slider(f"{symbol_} %", 0.0, 100.0, step=0.5, key=key)
+
+        total = sum(sliders.values())
+        if total == 0:
+            st.warning("Move at least one slider above zero.")
+        else:
+            if abs(total - 100) > 0.5:
+                st.caption(f"Sliders add up to {total:.1f}% - they're scaled to 100% for the maths.")
+            try:
+                returns = load_returns(tuple(sorted(symbols)))
+                before, after = simulate(returns, current), simulate(returns, sliders)
+            except KeyError as error:
+                st.error(f"No price data for {error} - check the symbol.")
+            else:
+                def vs_now(key, unit="", decimals=1):
+                    """The change badge, or None (no badge) if it rounds to zero.
+                    Tiny leftovers like 0.0000001 would otherwise show as a red '+0.0'."""
+                    change = round(after[key] - before[key], decimals)
+                    return None if change == 0 else f"{change:+.{decimals}f}{unit} vs now"
+
+                st.subheader("What-if mix vs your current mix (past year)")
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("$100 became", f"${after['$100 became']:.2f}", vs_now("$100 became", decimals=2))
+                m2.metric("Volatility", f"{after['volatility_%']:.1f}%", vs_now("volatility_%", " pts"),
+                          delta_color="inverse")  # inverse: going DOWN is shown in green
+                m3.metric("Biggest drop", f"{after['biggest_drop_%']:.1f}%", vs_now("biggest_drop_%", " pts"))
+                m4.metric("Effective number of stocks", f"{after['effective_stocks']:.1f}",
+                          vs_now("effective_stocks"))
+
+                line_chart(pd.DataFrame({"Current mix": before["growth"],
+                                         "What-if mix": after["growth"]}), y_title="Value of $100")
+
+                mix = pd.DataFrame({"Money %": pd.Series(sliders) / total * 100,
+                                    "Risk %": after["risk_%"]}).fillna(0)
+                st.dataframe(mix[mix["Money %"] > 0].sort_values("Money %", ascending=False)
+                             .style.format(precision=1), width="stretch")

@@ -49,6 +49,38 @@ class HealthCheck:
     comparison: pd.DataFrame    # final value, volatility and biggest drop: your mix vs SPY
 
 
+def normalise(weights):
+    """
+    Scale weights so they add up to 1 (100%), dropping zeros.
+    {"A": 30, "B": 10, "C": 0} -> {"A": 0.75, "B": 0.25}
+    Sliders can add up to anything; this turns them into proper shares.
+    """
+    weights = pd.Series(weights, dtype=float)
+    weights = weights[weights > 0]
+    if weights.empty:
+        raise ValueError("At least one weight must be above zero.")
+    return weights / weights.sum()
+
+
+def simulate(daily_returns, weights):
+    """
+    'What if I'd held THIS mix over the period?' (Lesson 22)
+    Returns a dict of results plus each position's share of the risk.
+    Uses past prices, so it shows what WOULD have happened - not a forecast.
+    """
+    weights = normalise(weights)
+    daily = weighted_returns(daily_returns, weights)
+    value = 100 * (1 + daily).cumprod()
+    return {
+        "$100 became": value.iloc[-1],
+        "volatility_%": annual_volatility(daily),
+        "biggest_drop_%": biggest_drop(value),
+        "effective_stocks": effective_stocks(weights),
+        "risk_%": risk_shares(daily_returns, weights),
+        "growth": value,
+    }
+
+
 def health_check(days=365):
     """Analyse the current paper portfolio. Returns a HealthCheck, or None if it's empty."""
     client = trading_client()

@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **21 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **22 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -23,7 +23,7 @@ It's built as **21 small, heavily commented lessons**, each one adding a new cod
 | **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment (word list and FinBERT AI) vs price moves |
 | **Backtesting & statistics** | Moving-average strategy vs buy & hold, trading costs, train/test split, shuffle (permutation) tests across 12 stocks |
 | **Paper trading** | Market and limit orders, a dry-run-first bot with a watchlist and decision log, a read-only portfolio health check (money vs risk share, effective number of stocks, overlap) |
-| **Dashboard** | Streamlit app with tabs: live-updating intraday chart, account value, positions, bot log, and a portfolio health page |
+| **Dashboard** | Streamlit app with tabs: live-updating intraday chart, account value, positions, bot log, a portfolio health page, and a what-if simulator with sliders |
 | **Engineering** | Shared `helpers` module, unit tests with pytest, CI on GitHub Actions |
 
 ## Key findings
@@ -130,9 +130,9 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 ├── helpers.py                # shared tools: Alpaca clients, data download, backtest maths
 ├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
 ├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
-├── portfolio.py              # portfolio health-check calculations (used by lesson 20 and the dashboard)
+├── portfolio.py              # portfolio health check + what-if simulator calculations
 ├── step1_connect.py … step20_portfolio_check.py   # the lessons (see below)
-├── step11_dashboard.py       # Streamlit dashboard (live section: lesson 14, health tab: lesson 21)
+├── step11_dashboard.py       # Streamlit dashboard (live: lesson 14, health tab: 21, what-if tab: 22)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
 ├── docs/images/              # charts used in this README
@@ -166,6 +166,7 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 | 19 | `step19_diversification.py` | Diversification: random portfolios, annualised volatility, correlation heatmap, split-adjusted prices |
 | 20 | `step20_portfolio_check.py` | Health check of your own paper portfolio: weights, covariance, risk shares, effective number of stocks |
 | 21 | `portfolio.py` + dashboard | Health check as a dashboard tab: separating calculations from display, dataclasses, tabs |
+| 22 | `portfolio.py` + dashboard | What-if simulator: sliders, session state, normalising weights, hindsight vs forecast |
 
 ## Built with
 
@@ -210,6 +211,7 @@ GitHub Actions
 - **Limit order**: buy/sell only at your price or better. You pick the price, but it may never fill.
 - **Position**: a stock you currently own. **Filled**: the order actually happened.
 - **Unrealized profit/loss**: how much a position is up or down on paper, before you sell.
+- **Hindsight**: judging with knowledge of what actually happened; a what-if on past prices isn't a forecast.
 - **Stock split**: a company turns each share into several cheaper ones (e.g. 1 → 10). Raw prices drop, but nobody loses money.
 - **Adjusted prices**: old prices rewritten to account for splits and dividends, so charts and returns stay honest.
 - **Diversification**: spreading money over many investments so one bad one can't sink you.
@@ -255,6 +257,9 @@ GitHub Actions
 - **Separation of concerns**: keeping calculations apart from display, so several screens can share one set of maths.
 - **Dataclass**: a simple labelled container holding several results together.
 - **Refactoring**: reorganising code without changing what it does.
+- **Session state**: memory that survives when a Streamlit page re-runs (e.g. slider positions).
+- **Normalise**: scale numbers so they add up to a total, e.g. slider values → shares adding up to 100%.
+- **Floating-point error**: tiny leftovers in computer maths (0.1 + 0.2 = 0.30000000000000004).
 - **Class**: a bundle of data and the functions that work on it (e.g. `PoliteFetcher`).
 - **Hash**: a short fingerprint of some text; the same text always gives the same hash.
 - **De-duplication**: making sure the same item is never stored twice.
