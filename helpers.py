@@ -21,7 +21,7 @@ from alpaca.data.enums import DataFeed
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.historical.news import NewsClient
 from alpaca.data.live import StockDataStream
-from alpaca.data.requests import StockBarsRequest
+from alpaca.data.requests import StockBarsRequest, StockLatestTradeRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.client import TradingClient
 
@@ -81,6 +81,32 @@ def daily_closes(symbols, days=365):
     if isinstance(symbols, str):
         return bars.df.loc[symbols]["close"]
     return bars.df["close"].unstack(level="symbol")[symbols].dropna()
+
+
+def latest_session_minutes(symbol):
+    """
+    1-minute bars for the most recent trading session (today if the market is open,
+    otherwise the last day it was open). Returns a table indexed by New York time.
+    """
+    bars = data_client().get_stock_bars(
+        StockBarsRequest(
+            symbol_or_symbols=symbol,
+            timeframe=TimeFrame.Minute,
+            start=datetime.now() - timedelta(days=4),  # enough to cover a weekend
+            feed=DataFeed.IEX,
+        )
+    )
+    df = bars.df.loc[symbol]
+    df.index = df.index.tz_convert("America/New_York")
+    df = df.between_time("09:30", "15:59")  # regular hours only, no pre-/after-market
+    last_day = df.index[-1].date()
+    return df[df.index.date == last_day]
+
+
+def latest_trade(symbol):
+    """The most recent trade for a symbol: has .price, .size and .timestamp."""
+    request = StockLatestTradeRequest(symbol_or_symbols=symbol, feed=DataFeed.IEX)
+    return data_client().get_stock_latest_trade(request)[symbol]
 
 
 # --- Maths (no internet needed - this is what the tests check) -----------------

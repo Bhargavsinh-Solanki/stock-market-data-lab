@@ -1,0 +1,19 @@
+# Continuous Integration (CI): every time code is pushed to GitHub,
+# GitHub starts a fresh computer, installs the project and runs the tests.
+# The tests use fake prices only, so no Alpaca keys are needed here.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install -r requirements.txt
+      - run: pytest -v

@@ -25,7 +25,7 @@ import pandas as pd
 import streamlit as st
 from alpaca.trading.requests import GetPortfolioHistoryRequest
 
-from helpers import daily_closes, trading_client
+from helpers import daily_closes, latest_session_minutes, latest_trade, trading_client
 
 LOG_FILE = "data/bot_log.csv"
 
@@ -91,8 +91,46 @@ with st.sidebar:
     symbol = st.text_input("Stock to chart", "SPY").strip().upper()
     ma_days = st.slider("Moving-average days", min_value=10, max_value=200, value=50, step=5)
     period = st.selectbox("Account history", ["1W", "1M", "3M", "6M", "1A"], index=1)
+    live_on = st.toggle("Live updates (every 5 s)", value=True)
     if st.button("🔄 Refresh data"):
         st.cache_data.clear()  # forget everything cached, download fresh
+
+
+# --- LESSON 14: the live section ------------------------------------------------------
+# A FRAGMENT is a piece of the page that can re-run ON ITS OWN. With run_every="5s",
+# only this function re-runs every 5 seconds; the rest of the page stays still.
+#
+# This is POLLING (asking "anything new?" every 5 s), not streaming like Lesson 13.
+# Why? The free plan allows ONE stream at a time, and a web page that re-runs on every
+# click would easily open duplicates. Asking every 5 seconds is simple and reliable.
+def live_section():
+    try:
+        minutes = latest_session_minutes(symbol)
+        trade = latest_trade(symbol)
+    except Exception as error:
+        st.error(f"Couldn't load live data for '{symbol}': {error}")
+        return
+
+    session_open = minutes["open"].iloc[0]
+    change = trade.price - session_open
+    trade_time = trade.timestamp.astimezone()  # your local time
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric(f"{symbol} last trade", f"${trade.price:,.2f}",
+              f"{change:+.2f} ({change / session_open * 100:+.2f}%) since open")
+    # One $ per box: two $ signs in one box would be read as a maths formula (Lesson 11)
+    c2.metric("Today's high", f"${minutes['high'].max():,.2f}")
+    c3.metric("Today's low", f"${minutes['low'].min():,.2f}")
+    c4.metric("Last trade at", f"{trade_time:%H:%M:%S}")
+
+    chart = minutes[["close"]].rename(columns={"close": f"{symbol} 1-minute close"})
+    line_chart(chart.tz_localize(None))  # New York time on the axis
+    st.caption(f"Session of {minutes.index[0]:%A %d %B} · times on the chart are New York time · "
+               f"{'refreshing every 5 s' if live_on else 'live updates off'} · free IEX feed")
+
+
+st.subheader(f"🔴 Live: {symbol} today")
+st.fragment(run_every="5s" if live_on else None)(live_section)()
 
 # --- Section 1: account summary ---------------------------------------------------
 account, positions, market_open = load_account()
