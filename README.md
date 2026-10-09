@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **25 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **27 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -22,8 +22,9 @@ It's built as **25 small, heavily commented lessons**, each one adding a new cod
 | **Web crawling** | Own polite crawler: Alpaca + Yahoo Finance RSS into a growing news archive, robots.txt-aware article text extraction |
 | **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment (word list and FinBERT AI) vs price moves |
 | **Backtesting & statistics** | Moving-average strategy vs buy & hold, trading costs, train/test split, shuffle (permutation) tests across 12 stocks |
-| **Paper trading** | Market and limit orders, a dry-run-first bot with a watchlist and decision log, a read-only portfolio health check (money vs risk share, effective number of stocks, overlap) |
+| **Paper trading** | Market and limit orders, dry-run-first bots (lesson 8, and lesson 27 with a cash check and email summaries) with watchlists and decision logs, a read-only portfolio health check (money vs risk share, effective number of stocks, overlap) |
 | **Dashboard** | Streamlit app with tabs: live-updating intraday chart, account value, positions, bot log, a portfolio health page, and a what-if simulator with sliders |
+| **Daily email** | Facts-only market report: your rule alerts, your holdings' moves, market and sector overview, headlines |
 | **Engineering** | Shared `helpers` module, unit tests with pytest, CI on GitHub Actions |
 
 ## Key findings
@@ -130,6 +131,33 @@ run `crontab -e`, paste this one line (change the folder path if yours differs),
 Check it's there with `crontab -l`. Remove it again with `crontab -e` (delete the line).
 Cron skips runs while the Mac is asleep or off, which is fine: the next run catches up on new headlines.
 
+### Daily email report (optional)
+1. Turn on 2-Step Verification for your Google account, then create an **App Password**
+   (Google Account → Security → App passwords). Add `EMAIL_TO`, `SMTP_USER` and
+   `SMTP_PASSWORD` to `.env` (see `.env.example`).
+2. Check the settings, preview, then send one to yourself:
+   ```bash
+   python emailer.py --test
+   python step26_daily_email.py
+   python step26_daily_email.py --send
+   ```
+   A failed email never crashes the bot; resend a saved one with
+   `python emailer.py --resend data/paper_bot_email.html`.
+3. To get it every weekday at 22:30 (after the US close), add a second cron line:
+   ```
+   30 22 * * 1-5 cd ~/Github/global-political-trades-forecast && .venv/bin/python step26_daily_email.py --send >> data/email.log 2>&1
+   ```
+
+### Paper bot with email (optional)
+```bash
+python step27_paper_bot.py                  # dry run: decisions + email preview, sends nothing
+python step27_paper_bot.py --trade --email  # sends PAPER orders and emails you the summary
+```
+To run it every weekday at 16:00 (30 minutes after the US open, Central European time):
+```
+0 16 * * 1-5 cd ~/Github/global-political-trades-forecast && .venv/bin/python step27_paper_bot.py --trade --email >> data/paper_bot.log 2>&1
+```
+
 ## Project structure
 
 ```
@@ -137,7 +165,10 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 ├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
 ├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
 ├── portfolio.py              # portfolio health check + what-if simulator calculations
-├── step1_connect.py … step25_etf_transition.py   # the lessons (see below)
+├── report.py                 # daily report: market moves, your rule checks, headlines, HTML
+├── emailer.py                # sends email over SMTP using settings from .env
+├── paper_bot.py              # the paper bot's decision table (buy / hold / sell / stay out)
+├── step1_connect.py … step27_paper_bot.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live: lesson 14, health tab: 21, what-if tab: 22)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
@@ -177,6 +208,8 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 | 23 | `step23_year_by_year.py` | Year-by-year checks: grouping by year, rank (Spearman) correlation, does risk or return carry over? |
 | 24 | `step24_my_portfolio.py` | Health check of a real portfolio from a private CSV: keeping data out of git, monkeypatching, generalising code |
 | 25 | `step25_etf_transition.py` | Planner for a gradual move from stocks to ETFs: monthly orders, fee comparison, risk along the path |
+| 26 | `step26_daily_email.py` | Daily email report: HTML, SMTP and App Passwords, escaping, fake servers in tests, safe-by-default |
+| 27 | `step27_paper_bot.py` | Paper-trading bot that emails its decisions: pure decision functions, cash check, combining modules |
 
 ## Built with
 
@@ -282,6 +315,12 @@ GitHub Actions
 - **Recursion**: a function that calls itself; without a stopping point it runs until Python gives up.
 - **Monkeypatching**: temporarily swapping a function for a fake one in a test (e.g. no real download).
 - **Twin axis**: a chart with two y-axes, so two different units (e.g. € and %) can share one picture.
+- **HTML**: the language of web pages, also used for formatted emails.
+- **SMTP**: the standard way programs send email.
+- **App Password**: a separate password just for one program, so your main password is never stored.
+- **Escaping**: making text safe to show inside HTML, so `<` and `&` can't break or hijack the page.
+- **Safe by default**: a program that only previews unless you explicitly tell it to act (`--send`, `--trade`).
+- **Pure function**: gives the same output for the same input and touches nothing outside itself - easy to test.
 - **Class**: a bundle of data and the functions that work on it (e.g. `PoliteFetcher`).
 - **Hash**: a short fingerprint of some text; the same text always gives the same hash.
 - **De-duplication**: making sure the same item is never stored twice.
