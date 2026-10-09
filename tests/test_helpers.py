@@ -18,7 +18,9 @@ import pytest
 # Let this file find helpers.py, which lives one folder up.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from helpers import backtest, biggest_drop, grow_100, ma_rule_positions, trading_day_for  # noqa: E402
+from helpers import (  # noqa: E402
+    backtest, biggest_drop, grow_100, headline_sentiment, ma_rule_positions, trading_day_for,
+)
 
 
 def fake_prices(values):
@@ -105,3 +107,24 @@ def test_news_timing_works_with_utc_times():
     trading_days = pd.to_datetime(["2026-10-01", "2026-10-02"])
     published = pd.to_datetime(["2026-10-01 21:30"]).tz_localize("UTC")
     assert trading_day_for(published, trading_days)[0] == pd.Timestamp("2026-10-02")
+
+
+# --- headline_sentiment ---------------------------------------------------------------
+
+def test_sentiment_positive_and_negative():
+    assert headline_sentiment("Apple beats earnings estimates") == 1
+    assert headline_sentiment("Tesla stock falls after delivery miss") == -2
+
+
+def test_sentiment_ignores_case_and_punctuation():
+    assert headline_sentiment("UPGRADE: Nvidia SOARS!") == 2  # capitals and ":" "!" don't matter
+    assert headline_sentiment("Nvidia soars; analysts upgraded it") == 2
+
+
+def test_sentiment_whole_words_only():
+    # "falls" hides inside "waterfalls" - it must NOT count as a negative word
+    assert headline_sentiment("Waterfalls and highlands tour") == 0
+
+
+def test_sentiment_mixed_headline_cancels_out():
+    assert headline_sentiment("Stock drops despite record profits") == 1  # -1 +1 +1

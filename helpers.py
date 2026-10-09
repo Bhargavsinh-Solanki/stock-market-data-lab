@@ -12,6 +12,7 @@ The tests in tests/test_helpers.py check the maths parts automatically.
 """
 
 import os
+import re
 from datetime import datetime, timedelta
 
 import certifi
@@ -151,6 +152,30 @@ def trading_day_for(published, trading_days):
     days = pd.DatetimeIndex(trading_days)
     pos = days.searchsorted(day)  # first trading day on or after `day`
     return pd.DatetimeIndex([days[p] if p < len(days) else pd.NaT for p in pos])
+
+
+# --- News sentiment (Lesson 15) ----------------------------------------------------
+# A "word list" (lexicon) approach: count good words and bad words. Very simple -
+# it can't understand sarcasm, context or "not good" - but easy to read and test.
+POSITIVE_WORDS = {
+    "beat", "beats", "surge", "surges", "soar", "soars", "jump", "jumps", "rally", "rallies",
+    "gain", "gains", "rise", "rises", "climb", "climbs", "record", "strong", "stronger",
+    "upgrade", "upgrades", "upgraded", "outperform", "bullish", "boost", "boosts", "raises",
+    "growth", "profit", "profits", "win", "wins", "approval", "approved", "high", "higher",
+}
+NEGATIVE_WORDS = {
+    "miss", "misses", "fall", "falls", "drop", "drops", "plunge", "plunges", "slump", "slumps",
+    "sink", "sinks", "tumble", "tumbles", "decline", "declines", "loss", "losses", "weak",
+    "weaker", "downgrade", "downgrades", "downgraded", "underperform", "bearish", "cut", "cuts",
+    "lawsuit", "probe", "investigation", "recall", "layoffs", "warning", "warns", "low", "lower",
+    "fine", "fined", "ban", "concerns", "fears",
+}
+
+
+def headline_sentiment(text):
+    """+1 for each positive word, -1 for each negative word. 0 = neutral or mixed."""
+    words = re.findall(r"[a-z]+", text.lower())  # split into lowercase words, drop punctuation
+    return sum(w in POSITIVE_WORDS for w in words) - sum(w in NEGATIVE_WORDS for w in words)
 
 
 def biggest_drop(values):

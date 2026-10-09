@@ -1,6 +1,6 @@
 # Stock Market Data Lab
 
-[![tests](https://github.com/Bhargavsinh-Solanki/global-political-trades-forecast/actions/workflows/tests.yml/badge.svg)](https://github.com/Bhargavsinh-Solanki/global-political-trades-forecast/actions/workflows/tests.yml)
+[![tests](https://github.com/Bhargavsinh-Solanki/stock-market-data-lab/actions/workflows/tests.yml/badge.svg)](https://github.com/Bhargavsinh-Solanki/stock-market-data-lab/actions/workflows/tests.yml)
 ![Python](https://img.shields.io/badge/python-3.14-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **14 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **15 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -19,7 +19,7 @@ It's built as **14 small, heavily commented lessons**, each one adding a new cod
 | Area | Highlights |
 |---|---|
 | **Market data** | Historical daily and 1-minute bars, latest trades, news headlines, live websocket stream |
-| **Analysis** | Returns, volatility, max drawdown, moving averages, news vs price-move correlation |
+| **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment vs price moves |
 | **Backtesting** | Moving-average strategy vs buy & hold, trading costs, train/test split to expose overfitting |
 | **Paper trading** | Market and limit orders, a dry-run-first bot with a watchlist and decision log |
 | **Dashboard** | Streamlit app with live-updating intraday chart, account value, positions and bot log |
@@ -36,6 +36,9 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
    **0 of 39** settings beat buy & hold out-of-sample.
 3. **News days are bigger move days, but that doesn't prove news causes the moves.**
    On the busiest 20% of news days, AAPL and TSLA moved about 1.6–1.8× as much (correlation +0.38).
+4. **Headline sentiment didn't predict the next day.** A word-list score of each day's headlines had
+   almost no link to next-day moves (correlation +0.06 for AAPL, −0.09 for TSLA). Apple's "good news"
+   days looked promising (+0.64% next day), but Tesla showed the opposite, a sign of noise, not signal.
 
 <table>
 <tr>
@@ -64,8 +67,8 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 You need Python 3.12+ and a free [Alpaca](https://alpaca.markets) account (paper trading keys).
 
 ```bash
-git clone https://github.com/Bhargavsinh-Solanki/global-political-trades-forecast.git
-cd global-political-trades-forecast
+git clone https://github.com/Bhargavsinh-Solanki/stock-market-data-lab.git
+cd stock-market-data-lab
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -97,7 +100,7 @@ python step9_report.py        # report card for the paper account
 
 ```
 ├── helpers.py                # shared tools: Alpaca clients, data download, backtest maths
-├── step1_connect.py … step13_live.py   # the lessons (see below)
+├── step1_connect.py … step15_sentiment.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live section added in lesson 14)
 ├── tests/test_helpers.py     # unit tests on fake data
 ├── .github/workflows/        # CI: runs the tests on every push
@@ -125,6 +128,7 @@ python step9_report.py        # report card for the paper account
 | 12 | `step12_news.py` | News headlines vs price moves: joining tables, grouping, correlation, news timing |
 | 13 | `step13_live.py` | Live streaming trades and 1-minute bars over a websocket: callbacks, async, timers |
 | 14 | `step11_dashboard.py` + repo | Live dashboard section (fragments, polling vs streaming); CI, licence, portfolio README |
+| 15 | `step15_sentiment.py` | Scoring headlines as good/bad news: sets, regex, `.apply()`, same-day vs next-day tests |
 
 ## Built with
 
@@ -173,6 +177,8 @@ GitHub Actions
 - **Train / test split**: choose settings on old data, then judge them on newer data they've never seen.
 - **Correlation**: a number from -1 to +1 showing how strongly two things move together.
 - **Correlation is not causation**: two things moving together doesn't prove one causes the other.
+- **Sentiment**: whether a piece of text sounds positive or negative.
+- **Noise**: random ups and downs that can look like a pattern, especially in small samples.
 
 **Coding**
 - **Module**: a file of reusable tools that other files can `import`.
@@ -183,6 +189,8 @@ GitHub Actions
 - **async / await**: Python's way to wait for many things at once without freezing.
 - **Caching**: remembering a result for a while so you don't fetch it again on every click.
 - **Fragment**: a part of a Streamlit page that can refresh on its own.
+- **Set**: a collection of unique items with very fast "is this in it?" checks.
+- **Regular expression (regex)**: a pattern for finding text, e.g. `[a-z]+` means "a run of letters".
 - **Bot / dry run / watchlist / log**: a program that trades by itself / a rehearsal that sends nothing / the stocks it may trade / its record of every decision.
 
 ## License
