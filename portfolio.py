@@ -34,6 +34,10 @@ SECTOR = {
 }
 
 
+# Funds that hold many companies at once (ETFs). Everything else is treated as a single stock.
+ETFS = {"SPY", "VOO", "IVV", "VTI", "QQQ", "URTH", "ACWI", "VT", "VEA", "VWO", "IEFA", "EFA", "AGG", "BND"}
+
+
 @dataclass
 class HealthCheck:
     """
@@ -109,6 +113,49 @@ def current_weights():
     return (values / values.sum()).sort_values(ascending=False)
 
 
+def returns_with_history(symbols, days=365, min_days=200):
+    """
+    Daily returns for the symbols that have at least `min_days` of prices.
+    Returns (returns table, list of symbols left out for having too little history).
+    """
+    symbols = list(dict.fromkeys(symbols))  # remove repeats, keep order
+    closes = daily_closes(symbols, days=days, keep_gaps=True)
+    days_of_data = closes.notna().sum()
+    usable = [s for s in symbols if days_of_data.get(s, 0) >= min_days]
+    left_out = [s for s in symbols if s not in usable]
+    return closes[usable].dropna().pct_change().dropna(), left_out
+
+
+def transition_plan(values, etf_split, months, keep=()):
+    """
+    A step-by-step plan for moving money from single stocks into ETFs (Lesson 25).
+
+    values:    money in each holding today, e.g. {"NVDA": 593, "URTH": 410}
+    etf_split: how the money moving into ETFs is shared out, e.g. {"URTH": 60, "SPY": 40}
+    months:    how many equal steps to spread the move over
+    keep:      stocks NOT to sell
+
+    Every month, each stock that isn't kept is sold down by the same slice
+    (1/months of today's value), and that money is split across the ETFs.
+    Plans in TODAY's money: real prices will move in between.
+    Returns a table: one row per month (0 = today), one column per holding.
+    """
+    values = pd.Series(values, dtype=float)
+    split = normalise(etf_split)
+    to_sell = [s for s in values.index if s not in ETFS and s not in keep]
+    slice_per_month = values[to_sell] / months
+
+    columns = list(dict.fromkeys(list(values.index) + list(split.index)))
+    plan = [values.reindex(columns, fill_value=0.0)]
+    for _ in range(months):
+        nxt = plan[-1].copy()
+        nxt[to_sell] -= slice_per_month                          # sell a slice of each stock
+        nxt[split.index] += slice_per_month.sum() * split        # buy ETFs with the money
+        plan.append(nxt.clip(lower=0))                           # no tiny negative leftovers
+    # reset_index: number the rows 0, 1, 2... (otherwise they'd inherit the input's name)
+    return pd.DataFrame(plan).reset_index(drop=True).rename_axis("month")
+
+
 def analyse(values, days=365, benchmarks=("SPY",), min_days=200, total=None):
     """
     The health check for ANY set of holdings (Lessons 20-24).
@@ -118,17 +165,11 @@ def analyse(values, days=365, benchmarks=("SPY",), min_days=200, total=None):
                 at all) are left out of the maths and reported in `excluded`
     """
     values = pd.Series(values, dtype=float).sort_values(ascending=False)
-    symbols = list(dict.fromkeys(list(values.index) + list(benchmarks)))  # no repeats, keep order
-    closes = daily_closes(symbols, days=days, keep_gaps=True)
-
-    days_of_data = closes.notna().sum()
-    usable = [s for s in values.index if days_of_data.get(s, 0) >= min_days]
+    returns, left_out = returns_with_history(list(values.index) + list(benchmarks), days, min_days)
+    usable = [s for s in values.index if s not in left_out]
     excluded = values.drop(usable)
     if not usable:
         raise ValueError("None of the holdings has enough price history.")
-
-    columns = list(dict.fromkeys(usable + list(benchmarks)))
-    returns = closes[columns].dropna().pct_change().dropna()
     weights = values[usable] / values[usable].sum()
 
     positions = pd.DataFrame({

@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **24 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **25 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -137,7 +137,7 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 ├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
 ├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
 ├── portfolio.py              # portfolio health check + what-if simulator calculations
-├── step1_connect.py … step24_my_portfolio.py   # the lessons (see below)
+├── step1_connect.py … step25_etf_transition.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live: lesson 14, health tab: 21, what-if tab: 22)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
@@ -176,6 +176,7 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 | 22 | `portfolio.py` + dashboard | What-if simulator: sliders, session state, normalising weights, hindsight vs forecast |
 | 23 | `step23_year_by_year.py` | Year-by-year checks: grouping by year, rank (Spearman) correlation, does risk or return carry over? |
 | 24 | `step24_my_portfolio.py` | Health check of a real portfolio from a private CSV: keeping data out of git, monkeypatching, generalising code |
+| 25 | `step25_etf_transition.py` | Planner for a gradual move from stocks to ETFs: monthly orders, fee comparison, risk along the path |
 
 ## Built with
 
@@ -225,6 +226,8 @@ GitHub Actions
 - **IPO / listing**: when a company's shares start trading on a stock exchange; there's no price history before it.
 - **Currency (FX) risk**: if you invest in euros in US-dollar assets, the EUR/USD rate moves your result too.
 - **Hedge**: a holding that tends to move against the rest, so it can *reduce* total risk (a negative risk share).
+- **UCITS**: the EU standard for funds; EU investors usually buy UCITS ETFs rather than US-listed ones.
+- **Order fee**: what a platform charges per buy or sell; many small orders can add up to a big share of a small portfolio.
 - **Persistence**: whether something stays similar from one period to the next (volatility does; returns don't).
 - **Year to date (YTD)**: from 1 January until today - an unfinished year.
 - **Stock split**: a company turns each share into several cheaper ones (e.g. 1 → 10). Raw prices drop, but nobody loses money.
@@ -278,6 +281,7 @@ GitHub Actions
 - **Floating-point error**: tiny leftovers in computer maths (0.1 + 0.2 = 0.30000000000000004).
 - **Recursion**: a function that calls itself; without a stopping point it runs until Python gives up.
 - **Monkeypatching**: temporarily swapping a function for a fake one in a test (e.g. no real download).
+- **Twin axis**: a chart with two y-axes, so two different units (e.g. € and %) can share one picture.
 - **Class**: a bundle of data and the functions that work on it (e.g. `PoliteFetcher`).
 - **Hash**: a short fingerprint of some text; the same text always gives the same hash.
 - **De-duplication**: making sure the same item is never stored twice.

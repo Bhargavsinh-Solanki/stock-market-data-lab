@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from portfolio import normalise, simulate, yearly_stats  # noqa: E402
+from portfolio import normalise, simulate, transition_plan, yearly_stats  # noqa: E402
 
 
 def fake_returns():
@@ -77,3 +77,37 @@ def test_analyse_leaves_out_holdings_without_enough_history(monkeypatch):
     assert list(check.positions.index) == ["A", "B"]
     assert check.positions["money_%"].sum() == pytest.approx(100)
     assert check.invested == 1000  # the total still counts every holding
+
+
+# --- transition_plan (Lesson 25) ------------------------------------------------------
+
+HOLDINGS = {"NVDA": 600, "ZS": 300, "JNJ": 100, "URTH": 400, "SPY": 300}
+
+
+def test_plan_starts_today_and_keeps_the_total():
+    plan = transition_plan(HOLDINGS, {"URTH": 1, "SPY": 1}, months=4)
+    assert len(plan) == 5  # month 0 (today) + 4 steps
+    assert dict(plan.loc[0]) == HOLDINGS
+    assert plan.sum(axis=1).tolist() == pytest.approx([1700] * 5)  # money only moves, never vanishes
+
+
+def test_plan_ends_with_no_stocks_except_kept_ones():
+    plan = transition_plan(HOLDINGS, {"URTH": 1}, months=3, keep=["JNJ"])
+    end = plan.iloc[-1]
+    assert end["NVDA"] == pytest.approx(0) and end["ZS"] == pytest.approx(0)
+    assert end["JNJ"] == 100                      # kept stock untouched
+    assert end["URTH"] == pytest.approx(400 + 900)  # all the sold money went into URTH
+    assert end["SPY"] == 300                      # not in the split -> unchanged
+
+
+def test_plan_sells_equal_slices_and_splits_by_percentage():
+    plan = transition_plan({"NVDA": 300, "URTH": 0}, {"URTH": 75, "SPY": 25}, months=3)
+    assert plan["NVDA"].tolist() == pytest.approx([300, 200, 100, 0])
+    assert plan["SPY"].tolist() == pytest.approx([0, 25, 50, 75])  # a NEW ETF column appears
+
+
+def test_plan_rows_are_months_even_for_a_named_column():
+    # Reading a CSV gives a NAMED column (e.g. "value_eur"); rows must still be months 0..N
+    values = pd.Series(HOLDINGS, name="value_eur")
+    plan = transition_plan(values, {"URTH": 1}, months=2)
+    assert list(plan.index) == [0, 1, 2]
