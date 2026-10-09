@@ -1,25 +1,3 @@
-# Core platform (Phases 1-2). Neural / tracking extras: pip install ".[neural,tracking]"
-pandas>=2.1
-numpy>=1.26
-polars>=0.20
-duckdb>=0.10
-SQLAlchemy>=2.0
-httpx>=0.27
-requests>=2.31
-beautifulsoup4>=4.12
-lxml>=5.1
-pdfplumber>=0.11
-tenacity>=8.2
-pydantic>=2.6
-pydantic-settings>=2.2
-pandera>=0.18
-python-dotenv>=1.0
-yfinance>=0.2.37
-scikit-learn>=1.4
-scipy>=1.12
-lightgbm>=4.3
-joblib>=1.3
-shap>=0.45
-streamlit>=1.32
-plotly>=5.20
-pytest>=8.0
+alpaca-py        # Alpaca's official Python library (talks to Alpaca for us)
+python-dotenv    # Reads our secret keys from the .env file
+pandas           # Turns data into neat tables (like Excel inside Python)

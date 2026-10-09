@@ -1,29 +1,12 @@
-# secrets & env
+# Your secret keys live here - NEVER upload this to GitHub
 .env
+
+# Python's private toolbox folder (recreate anytime)
 .venv/
-venv/
 
-# data & artifacts (raw payloads can be large; DB is rebuildable)
-data/raw/*
-data/processed/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-mlruns/
-
-# training artifacts
-lightning_logs/
-
-# python
+# Files Python generates automatically
 __pycache__/
 *.pyc
-*.egg-info/
-.pytest_cache/
-.ruff_cache/
-build/
-dist/
 
-# notebooks
-.ipynb_checkpoints/
-
-# OS
+# Mac junk
 .DS_Store
