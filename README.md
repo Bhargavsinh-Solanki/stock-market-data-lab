@@ -22,6 +22,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 | 4 | `step4_compare.py` | Lists, functions and loops; comparing returns and risk across stocks |
 | 5 | `step5_backtest.py` | Backtesting a moving-average rule vs buy & hold; avoiding look-ahead bias |
 | 6 | `step6_overfitting.py` | Trading costs, testing many settings, train/test split and overfitting |
+| 7 | `step7_paper_order.py` | Placing paper orders (market vs limit), checking positions and orders |
 
 ## Glossary
 - **API**: a "menu" a company offers so programs can ask it for data.
@@ -41,3 +42,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 - **Spread / slippage**: hidden trading costs - the gap between buy and sell prices, and price moving while your order fills.
 - **Overfitting**: tuning a rule until it fits the past perfectly, including the luck, so it fails on new data.
 - **Train / test split**: choose settings on old data, then judge them on newer data they've never seen.
+- **Market order**: buy/sell now at the current price. Fast, but you don't pick the price.
+- **Limit order**: buy/sell only at your price or better. You pick the price, but it may never fill.
+- **Position**: a stock you currently own.
+- **Filled**: the order actually happened.
