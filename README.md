@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **20 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **21 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -23,7 +23,7 @@ It's built as **20 small, heavily commented lessons**, each one adding a new cod
 | **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment (word list and FinBERT AI) vs price moves |
 | **Backtesting & statistics** | Moving-average strategy vs buy & hold, trading costs, train/test split, shuffle (permutation) tests across 12 stocks |
 | **Paper trading** | Market and limit orders, a dry-run-first bot with a watchlist and decision log, a read-only portfolio health check (money vs risk share, effective number of stocks, overlap) |
-| **Dashboard** | Streamlit app with live-updating intraday chart, account value, positions and bot log |
+| **Dashboard** | Streamlit app with tabs: live-updating intraday chart, account value, positions, bot log, and a portfolio health page |
 | **Engineering** | Shared `helpers` module, unit tests with pytest, CI on GitHub Actions |
 
 ## Key findings
@@ -130,8 +130,9 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 ├── helpers.py                # shared tools: Alpaca clients, data download, backtest maths
 ├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
 ├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
+├── portfolio.py              # portfolio health-check calculations (used by lesson 20 and the dashboard)
 ├── step1_connect.py … step20_portfolio_check.py   # the lessons (see below)
-├── step11_dashboard.py       # Streamlit dashboard (live section added in lesson 14)
+├── step11_dashboard.py       # Streamlit dashboard (live section: lesson 14, health tab: lesson 21)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
 ├── docs/images/              # charts used in this README
@@ -164,6 +165,7 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 | 18 | `step18_ai_sentiment.py` | A free AI (FinBERT) reads the news on your Mac: pre-trained models, probabilities, mocks, caching |
 | 19 | `step19_diversification.py` | Diversification: random portfolios, annualised volatility, correlation heatmap, split-adjusted prices |
 | 20 | `step20_portfolio_check.py` | Health check of your own paper portfolio: weights, covariance, risk shares, effective number of stocks |
+| 21 | `portfolio.py` + dashboard | Health check as a dashboard tab: separating calculations from display, dataclasses, tabs |
 
 ## Built with
 
@@ -250,6 +252,9 @@ GitHub Actions
 - **Heatmap**: a grid of coloured squares, where colour shows the size of each number.
 - **Covariance**: like correlation, but also counts how big the moves are.
 - **Matrix multiplication (`@`)**: combining every pair of rows and columns in one step.
+- **Separation of concerns**: keeping calculations apart from display, so several screens can share one set of maths.
+- **Dataclass**: a simple labelled container holding several results together.
+- **Refactoring**: reorganising code without changing what it does.
 - **Class**: a bundle of data and the functions that work on it (e.g. `PoliteFetcher`).
 - **Hash**: a short fingerprint of some text; the same text always gives the same hash.
 - **De-duplication**: making sure the same item is never stored twice.

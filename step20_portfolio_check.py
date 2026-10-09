@@ -13,6 +13,9 @@ tools at what you actually own in your paper account:
 READ-ONLY: it looks at your positions but never places orders.
 Educational analysis of a practice account - not financial advice.
 
+Since Lesson 21, the calculations live in portfolio.py (shared with the dashboard);
+this file only DISPLAYS them in the terminal.
+
 Run it with:   python step20_portfolio_check.py
 
 New coding ideas in this lesson:
@@ -25,88 +28,46 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
-from helpers import (
-    annual_volatility, biggest_drop, daily_closes, effective_stocks, risk_shares,
-    trading_client, weighted_returns,
-)
+from portfolio import health_check
 
-# Alpaca doesn't tell us a company's sector, so we keep a small list ourselves.
-SECTOR = {
-    "AAPL": "Tech", "MSFT": "Tech", "NVDA": "Tech", "AMD": "Tech", "INTC": "Tech",
-    "GOOGL": "Tech", "META": "Tech", "LITE": "Tech", "AVGO": "Tech",
-    "AMZN": "Consumer", "TSLA": "Consumer", "NFLX": "Consumer", "WMT": "Consumer",
-    "COST": "Consumer", "KO": "Consumer", "PEP": "Consumer", "HD": "Consumer",
-    "JPM": "Finance", "BAC": "Finance", "GS": "Finance",
-    "XOM": "Energy", "CVX": "Energy", "JNJ": "Health", "PFE": "Health", "CAT": "Industrial",
-    "SPY": "Fund: S&P 500", "QQQ": "Fund: Nasdaq 100",
-}
-
-# --- Your positions --------------------------------------------------------------------
-client = trading_client()
-account = client.get_account()
-positions = [p for p in client.get_all_positions() if p.asset_class.value == "us_equity"]
-if not positions:
+check = health_check()
+if check is None:
     raise SystemExit("No stock positions in your paper account yet - nothing to check.")
 
-values = pd.Series({p.symbol: float(p.market_value) for p in positions}).sort_values(ascending=False)
-weights = values / values.sum()  # each position's share of the invested money (adds up to 1)
-invested, total = values.sum(), float(account.portfolio_value)
-print(f"Paper account: ${total:,.0f}  ->  invested ${invested:,.0f} ({invested / total:.0%}), "
-      f"cash ${total - invested:,.0f} ({1 - invested / total:.0%})")
+cash = check.total - check.invested
+print(f"Paper account: ${check.total:,.0f}  ->  invested ${check.invested:,.0f} "
+      f"({check.invested / check.total:.0%}), cash ${cash:,.0f} ({cash / check.total:.0%})")
 print("Everything below is about the INVESTED part only.\n")
-
-# --- One year of returns for each holding (+ SPY as the yardstick) ---------------------
-symbols = list(weights.index) + (["SPY"] if "SPY" not in weights.index else [])
-returns = daily_closes(symbols, days=365).pct_change().dropna()
-portfolio = weighted_returns(returns, weights)
-
-risk = risk_shares(returns, weights)
-table = pd.DataFrame({
-    "sector": [SECTOR.get(s, "Other") for s in weights.index],
-    "value_$": values,
-    "money_%": weights * 100,
-    "risk_%": risk,
-    "own_volatility_%": [annual_volatility(returns[s]) for s in weights.index],
-})
 
 print("1-2. Money vs risk, position by position (past year of prices)")
 print(f"  {'':<6}{'sector':<18}{'value':>10}{'money':>8}{'risk':>8}{'its own bumpiness':>19}")
-for s, r in table.iterrows():
+for s, r in check.positions.iterrows():
     flag = "  <- risk > 1.5x its money" if r["risk_%"] > 1.5 * r["money_%"] else ""
     print(f"  {s:<6}{r['sector']:<18}{r['value_$']:>10,.0f}{r['money_%']:>7.1f}%{r['risk_%']:>7.1f}%"
           f"{r['own_volatility_%']:>18.1f}%{flag}")
 
 print("\n  By sector (money):")
-for sector, pct in table.groupby("sector")["money_%"].sum().sort_values(ascending=False).items():
+for sector, pct in check.by_sector.items():
     print(f"    {sector:<18}{pct:>6.1f}%  " + "#" * int(round(pct / 2)))
 
-# --- 3. Effective number of stocks --------------------------------------------------------
-eff = effective_stocks(weights)
-print(f"\n3. You hold {len(weights)} positions, but by size they act like about "
-      f"{eff:.1f} equal-sized ones.")
+print(f"\n3. You hold {len(check.positions)} positions, but by size they act like about "
+      f"{check.effective:.1f} equal-sized ones.")
 
-# --- 4. Hidden overlap: which holdings move together? -------------------------------------
-corr = returns[weights.index].corr()
-pairs = corr.where(np.triu(np.ones(corr.shape, dtype=bool), k=1)).stack().dropna()
-close_pairs = pairs[pairs > 0.7].sort_values(ascending=False)
 print("\n4. Holdings that move closely together (correlation above 0.7):")
-if close_pairs.empty:
+if check.close_pairs.empty:
     print("   none")
-for (a, b), c in close_pairs.items():
+for (a, b), c in check.close_pairs.items():
     print(f"   {a} & {b}: {c:.2f}")
 
-# --- 5. The last year vs just owning SPY ---------------------------------------------------
-spy = returns["SPY"]
 print("\n5. If you'd held today's mix for the past year, rebalanced daily:")
-for name, daily in [("Your mix", portfolio), ("Just SPY", spy)]:
-    value = 100 * (1 + daily).cumprod()
-    print(f"   {name:<9} $100 -> ${value.iloc[-1]:>6.2f}   volatility {annual_volatility(daily):5.1f}%   "
-          f"biggest drop {biggest_drop(value):6.1f}%")
+for name, r in check.comparison.iterrows():
+    print(f"   {name:<9} $100 -> ${r['$100 became']:>6.2f}   volatility {r['volatility_%']:5.1f}%   "
+          f"biggest drop {r['biggest_drop_%']:6.1f}%")
 print("\n(Educational analysis of a practice account - not financial advice.)")
 
-# --- Chart -----------------------------------------------------------------------------------
+# --- Chart ---------------------------------------------------------------------------------
+table, corr = check.positions, check.correlations
 fig, (left, right) = plt.subplots(1, 2, figsize=(13, 5), gridspec_kw={"width_ratios": [1.2, 1]})
 y = np.arange(len(table))
 left.barh(y + 0.2, table["money_%"], height=0.4, label="Share of money")

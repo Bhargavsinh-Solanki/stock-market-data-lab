@@ -26,6 +26,7 @@ import streamlit as st
 from alpaca.trading.requests import GetPortfolioHistoryRequest
 
 from helpers import daily_closes, latest_session_minutes, latest_trade, trading_client
+from portfolio import health_check
 
 LOG_FILE = "data/bot_log.csv"
 
@@ -64,6 +65,11 @@ def load_equity(period):
     return equity[equity > 0]
 
 
+@st.cache_data(ttl=600)
+def load_health_check():
+    return health_check()  # the same calculations as step20, shared via portfolio.py
+
+
 @st.cache_data(ttl=300)
 def load_prices(symbol):
     return daily_closes(symbol, days=365 * 2)
@@ -79,7 +85,9 @@ def line_chart(data, y_title="USD"):
     chart = alt.Chart(long).mark_line().encode(
         x="Date:T",
         y=alt.Y(f"{y_title}:Q", scale=alt.Scale(zero=False)),
-        color=alt.Color("Line:N", legend=alt.Legend(orient="top", title=None)),
+        # "category10" = clearly different colours per line (the default blues look alike)
+        color=alt.Color("Line:N", legend=alt.Legend(orient="top", title=None),
+                        scale=alt.Scale(scheme="category10")),
         tooltip=["Date:T", "Line:N", alt.Tooltip(f"{y_title}:Q", format=",.2f")],
     )
     st.altair_chart(chart, width="stretch")
@@ -129,59 +137,134 @@ def live_section():
                f"{'refreshing every 5 s' if live_on else 'live updates off'} · free IEX feed")
 
 
-st.subheader(f"🔴 Live: {symbol} today")
-st.fragment(run_every="5s" if live_on else None)(live_section)()
+# --- LESSON 21: TABS - separate pages inside one app -----------------------------------
+# Streamlit runs the code for EVERY tab on each refresh, so the slow health check is cached.
+overview_tab, health_tab = st.tabs(["📊 Overview", "🩺 Portfolio health"])
 
-# --- Section 1: account summary ---------------------------------------------------
-account, positions, market_open = load_account()
-equity = load_equity(period)
+with overview_tab:
+    st.subheader(f"🔴 Live: {symbol} today")
+    st.fragment(run_every="5s" if live_on else None)(live_section)()
 
-value = float(account.portfolio_value)
-day_change = value - float(account.last_equity)  # last_equity = value at yesterday's close
+    # --- Section 1: account summary ---------------------------------------------------
+    account, positions, market_open = load_account()
+    equity = load_equity(period)
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Account value", f"${value:,.0f}", f"{day_change:+,.2f} today")
-col2.metric("Cash", f"${float(account.cash):,.0f}")
-col3.metric(f"Change over {period}", f"{(equity.iloc[-1] / equity.iloc[0] - 1) * 100:+.2f}%")
-col4.metric("Market", "Open" if market_open else "Closed")
+    value = float(account.portfolio_value)
+    day_change = value - float(account.last_equity)  # last_equity = value at yesterday's close
 
-st.subheader(f"Account value - last {period}")
-line_chart(equity.rename("Account value").to_frame())
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Account value", f"${value:,.0f}", f"{day_change:+,.2f} today")
+    col2.metric("Cash", f"${float(account.cash):,.0f}")
+    col3.metric(f"Change over {period}", f"{(equity.iloc[-1] / equity.iloc[0] - 1) * 100:+.2f}%")
+    col4.metric("Market", "Open" if market_open else "Closed")
 
-# --- Section 2: positions ---------------------------------------------------------
-st.subheader("What you own")
-if positions.empty:
-    st.info("No positions yet.")
-else:
-    st.dataframe(
-        positions.style.format(precision=2).map(
-            lambda v: "color: green" if v > 0 else "color: red",
-            subset=["Profit/loss $", "Profit/loss %"],
-        ),
-        hide_index=True,
-        width="stretch",
-    )
+    st.subheader(f"Account value - last {period}")
+    line_chart(equity.rename("Account value").to_frame())
 
-# --- Section 3: a stock with the moving-average rule ------------------------------
-st.subheader(f"{symbol} and its {ma_days}-day average")
-try:
-    close = load_prices(symbol)
-    chart = pd.DataFrame({"Close": close, f"{ma_days}-day average": close.rolling(ma_days).mean()})
-    line_chart(chart)
-
-    last_close, last_ma = chart.iloc[-1, 0], chart.iloc[-1, 1]
-    if last_close > last_ma:
-        # "\\$" = a plain dollar sign. Two bare $ signs would be read as a maths formula.
-        st.success(f"Rule says **OWN**: \\${last_close:.2f} is above the average (\\${last_ma:.2f}).")
+    # --- Section 2: positions ---------------------------------------------------------
+    st.subheader("What you own")
+    if positions.empty:
+        st.info("No positions yet.")
     else:
-        st.warning(f"Rule says **CASH**: \\${last_close:.2f} is below the average (\\${last_ma:.2f}).")
-except Exception as error:
-    st.error(f"Couldn't load prices for '{symbol}': {error}")
+        st.dataframe(
+            positions.style.format(precision=2).map(
+                lambda v: "color: green" if v > 0 else "color: red",
+                subset=["Profit/loss $", "Profit/loss %"],
+            ),
+            hide_index=True,
+            width="stretch",
+        )
 
-# --- Section 4: the bot's log -----------------------------------------------------
-st.subheader("Bot decisions (newest first)")
-if os.path.exists(LOG_FILE):
-    log = pd.read_csv(LOG_FILE)
-    st.dataframe(log.iloc[::-1].head(20), hide_index=True, width="stretch")
-else:
-    st.info("No bot log yet - run `python step8_bot.py` first.")
+    # --- Section 3: a stock with the moving-average rule ------------------------------
+    st.subheader(f"{symbol} and its {ma_days}-day average")
+    try:
+        close = load_prices(symbol)
+        chart = pd.DataFrame({"Close": close, f"{ma_days}-day average": close.rolling(ma_days).mean()})
+        line_chart(chart)
+
+        last_close, last_ma = chart.iloc[-1, 0], chart.iloc[-1, 1]
+        if last_close > last_ma:
+            # "\\$" = a plain dollar sign. Two bare $ signs would be read as a maths formula.
+            st.success(f"Rule says **OWN**: \\${last_close:.2f} is above the average (\\${last_ma:.2f}).")
+        else:
+            st.warning(f"Rule says **CASH**: \\${last_close:.2f} is below the average (\\${last_ma:.2f}).")
+    except Exception as error:
+        st.error(f"Couldn't load prices for '{symbol}': {error}")
+
+    # --- Section 4: the bot's log -----------------------------------------------------
+    st.subheader("Bot decisions (newest first)")
+    if os.path.exists(LOG_FILE):
+        log = pd.read_csv(LOG_FILE)
+        st.dataframe(log.iloc[::-1].head(20), hide_index=True, width="stretch")
+    else:
+        st.info("No bot log yet - run `python step8_bot.py` first.")
+
+
+# --- The Portfolio health tab (Lesson 21) -----------------------------------------------
+with health_tab:
+    st.caption("Read-only analysis of your paper portfolio using the past year of prices · "
+               "educational, not financial advice · refreshes every 10 minutes")
+    check = load_health_check()
+    if check is None:
+        st.info("No stock positions in your paper account yet.")
+    else:
+        cash = check.total - check.invested
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Invested", f"${check.invested:,.0f}", f"{check.invested / check.total:.0%} of account",
+                  delta_color="off", delta_arrow="off")
+        c2.metric("Cash", f"${cash:,.0f}", f"{cash / check.total:.0%} of account",
+                  delta_color="off", delta_arrow="off")
+        c3.metric("Positions", len(check.positions))
+        c4.metric("Effective number of stocks", f"{check.effective:.1f}",
+                  help="How many equal-sized positions your portfolio really behaves like.")
+
+        st.subheader("Share of money vs share of risk")
+        bars = (check.positions[["money_%", "risk_%"]]
+                .rename(columns={"money_%": "Share of money", "risk_%": "Share of risk"})
+                .reset_index(names="Stock")
+                .melt("Stock", var_name="Measure", value_name="Percent"))
+        st.altair_chart(
+            alt.Chart(bars).mark_bar().encode(
+                y=alt.Y("Stock:N", sort=list(check.positions.index), title=None),
+                x=alt.X("Percent:Q", title="%"),
+                yOffset="Measure:N",  # two bars side by side for each stock
+                color=alt.Color("Measure:N", legend=alt.Legend(orient="top", title=None),
+                                scale=alt.Scale(scheme="category10")),
+                tooltip=["Stock", "Measure", alt.Tooltip("Percent:Q", format=".1f")],
+            ),
+            width="stretch",
+        )
+        risky = check.positions[check.positions["risk_%"] > 1.5 * check.positions["money_%"]]
+        if len(risky):
+            st.warning("Carrying more than 1.5x their share of the risk: " + ", ".join(
+                f"**{s}** ({r['money_%']:.1f}% of money, {r['risk_%']:.1f}% of risk)"
+                for s, r in risky.iterrows()))
+
+        st.dataframe(
+            check.positions.rename(columns={
+                "sector": "Sector", "value_$": "Value $", "money_%": "Money %",
+                "risk_%": "Risk %", "own_volatility_%": "Own volatility %",
+            }).style.format(precision=1),
+            width="stretch",
+        )
+
+        left, right = st.columns(2)
+        with left:
+            st.subheader("By sector")
+            st.bar_chart(check.by_sector, horizontal=True, x_label="", y_label="% of invested money")
+        with right:
+            st.subheader("Hidden overlap")
+            if check.close_pairs.empty:
+                st.success("No two holdings move together closely (correlation above 0.7).")
+            for (a, b), c in check.close_pairs.items():
+                st.info(f"**{a}** and **{b}** move together closely (correlation {c:.2f}).")
+
+        st.subheader("Past year: today's mix vs just owning SPY")
+        line_chart(check.growth, y_title="Value of $100")
+        st.dataframe(
+            check.comparison.rename(columns={
+                "$100 became": "$100 became", "volatility_%": "Volatility %",
+                "biggest_drop_%": "Biggest drop %",
+            }).style.format(precision=1),
+            width="stretch",
+        )
