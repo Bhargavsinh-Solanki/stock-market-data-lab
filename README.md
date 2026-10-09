@@ -21,6 +21,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 | 3 | `step3_save_and_chart.py` | Saving a year of prices to CSV, moving average, drawing a chart |
 | 4 | `step4_compare.py` | Lists, functions and loops; comparing returns and risk across stocks |
 | 5 | `step5_backtest.py` | Backtesting a moving-average rule vs buy & hold; avoiding look-ahead bias |
+| 6 | `step6_overfitting.py` | Trading costs, testing many settings, train/test split and overfitting |
 
 ## Glossary
 - **API**: a "menu" a company offers so programs can ask it for data.
@@ -37,3 +38,6 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 - **Signal**: the rule's decision for each day (own the stock or hold cash).
 - **Look-ahead bias**: accidentally using information you couldn't have had at the time. Makes results look too good.
 - **Compounding**: gains building on earlier gains, day after day.
+- **Spread / slippage**: hidden trading costs - the gap between buy and sell prices, and price moving while your order fills.
+- **Overfitting**: tuning a rule until it fits the past perfectly, including the luck, so it fails on new data.
+- **Train / test split**: choose settings on old data, then judge them on newer data they've never seen.
