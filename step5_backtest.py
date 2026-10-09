@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
-from alpaca.data.enums import DataFeed
+from alpaca.data.enums import Adjustment, DataFeed
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
@@ -47,6 +47,7 @@ bars = client.get_stock_bars(
         timeframe=TimeFrame.Day,
         start=datetime.now() - timedelta(days=365 * years),
         feed=DataFeed.IEX,
+        adjustment=Adjustment.ALL,  # adjust for stock splits & dividends (see Lesson 19)
     )
 )
 df = bars.df.loc[symbol][["close"]].copy()

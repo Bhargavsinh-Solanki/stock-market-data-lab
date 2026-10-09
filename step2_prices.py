@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
-from alpaca.data.enums import DataFeed
+from alpaca.data.enums import Adjustment, DataFeed
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest, StockLatestTradeRequest
 from alpaca.data.timeframe import TimeFrame
@@ -45,6 +45,7 @@ bars = client.get_stock_bars(
         timeframe=TimeFrame.Day,
         start=datetime.now() - timedelta(days=30),
         feed=FEED,
+        adjustment=Adjustment.ALL,  # adjust for stock splits & dividends (see Lesson 19)
     )
 )
 

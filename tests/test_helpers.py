@@ -19,8 +19,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from helpers import (  # noqa: E402
-    backtest, biggest_drop, grow_100, headline_sentiment, ma_rule_positions, shuffle_test,
-    trading_day_for,
+    annual_volatility, backtest, biggest_drop, grow_100, headline_sentiment, ma_rule_positions,
+    portfolio_returns, shuffle_test, trading_day_for,
 )
 
 
@@ -153,3 +153,24 @@ def test_shuffle_test_shrugs_at_a_typical_pick():
 def test_shuffle_test_is_repeatable_with_a_seed():
     values, chosen = list(range(50)), [i < 5 for i in range(50)]
     assert shuffle_test(values, chosen, seed=1)[2] == shuffle_test(values, chosen, seed=1)[2]
+
+
+# --- portfolios ---------------------------------------------------------------------
+
+def test_portfolio_is_the_average_of_its_stocks():
+    returns = pd.DataFrame({"A": [0.02, -0.01], "B": [0.00, 0.03], "C": [0.5, 0.5]})
+    assert list(portfolio_returns(returns, ["A", "B"])) == pytest.approx([0.01, 0.01])
+
+
+def test_opposite_stocks_cancel_out():
+    # A zigs when B zags: each one alone is bumpy, together they're perfectly smooth
+    returns = pd.DataFrame({"A": [0.02, -0.02] * 50, "B": [-0.02, 0.02] * 50})
+    assert annual_volatility(returns["A"]) > 25
+    assert annual_volatility(portfolio_returns(returns, ["A", "B"])) == pytest.approx(0)
+
+
+def test_identical_stocks_give_no_benefit():
+    returns = pd.DataFrame({"A": [0.02, -0.01, 0.03, -0.02]})
+    returns["B"] = returns["A"]  # B always moves exactly like A
+    together = annual_volatility(portfolio_returns(returns, ["A", "B"]))
+    assert together == pytest.approx(annual_volatility(returns["A"]))

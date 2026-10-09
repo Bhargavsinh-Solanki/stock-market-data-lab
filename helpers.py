@@ -19,7 +19,7 @@ import certifi
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-from alpaca.data.enums import DataFeed
+from alpaca.data.enums import Adjustment, DataFeed
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.historical.news import NewsClient
 from alpaca.data.live import StockDataStream
@@ -78,6 +78,7 @@ def daily_closes(symbols, days=365):
             timeframe=TimeFrame.Day,
             start=datetime.now() - timedelta(days=days),
             feed=DataFeed.IEX,
+            adjustment=Adjustment.ALL,  # adjust for stock splits & dividends (see Lesson 19)
         )
     )
     if isinstance(symbols, str):
@@ -96,6 +97,7 @@ def latest_session_minutes(symbol):
             timeframe=TimeFrame.Minute,
             start=datetime.now() - timedelta(days=4),  # enough to cover a weekend
             feed=DataFeed.IEX,
+            adjustment=Adjustment.ALL,  # adjust for stock splits & dividends (see Lesson 19)
         )
     )
     df = bars.df.loc[symbol]
@@ -227,6 +229,25 @@ def shuffle_test(values, chosen, n_shuffles=10_000, seed=0):
     ])
     p_value = (random_averages >= ours).mean()
     return ours, random_averages, p_value
+
+
+# --- Portfolios (Lesson 19) ----------------------------------------------------------
+
+def portfolio_returns(daily_returns, symbols):
+    """
+    Daily returns of an EQUAL-WEIGHT portfolio: the same amount in each stock,
+    topped back up to equal amounts every day (so it's just the average of their returns).
+    daily_returns: a table with one column per stock.
+    """
+    return daily_returns[list(symbols)].mean(axis=1)
+
+
+def annual_volatility(daily_returns):
+    """
+    How bumpy the ride is over a YEAR, in %. Daily ups and downs grow with the
+    square root of time, and a year has about 252 trading days, so: daily std x sqrt(252).
+    """
+    return pd.Series(daily_returns).std() * np.sqrt(252) * 100
 
 
 def biggest_drop(values):

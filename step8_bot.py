@@ -37,7 +37,7 @@ import sys
 from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
-from alpaca.data.enums import DataFeed
+from alpaca.data.enums import Adjustment, DataFeed
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
@@ -71,6 +71,7 @@ def latest_signal(symbol, clock):
             timeframe=TimeFrame.Day,
             start=datetime.now() - timedelta(days=MA_DAYS * 2 + 30),  # enough days for the average
             feed=DataFeed.IEX,
+            adjustment=Adjustment.ALL,  # adjust for stock splits & dividends (see Lesson 19)
         )
     )
     close = bars.df.loc[symbol]["close"]

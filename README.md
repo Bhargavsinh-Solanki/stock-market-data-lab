@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **18 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **19 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -33,7 +33,7 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 1. **A simple trend-following rule didn't beat buy & hold.** On 5 stocks over 3 years, it lost to
    simply holding every time, although it did reduce the worst drops (SPY: −9% vs −19%).
 2. **Optimising settings creates false confidence.** The best Tesla setting on training data
-   turned $100 into $354. On unseen data, the same setting turned $100 into $76.
+   turned $100 into $383. On unseen data, the same setting turned $100 into $85.
    **0 of 39** settings beat buy & hold out-of-sample.
 3. **Busy news days really are bigger move days.** On the busiest 20% of news days, AAPL and TSLA moved
    about 1.5× as much as on a typical day. A shuffle test confirmed this for **8 of 12 stocks** (p < 0.05), so it's
@@ -44,6 +44,9 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 5. **A real AI model didn't change that.** FinBERT, run locally, read headlines far better than the
    word list (it wasn't fooled by "…Earnings Beat" in a negative story), yet its "good news" days
    predicted the next day for **0 of 12** stocks. Better reading ≠ a trading edge.
+6. **Diversification is the closest thing to a free lunch.** Across 2,000 random portfolios each, going
+   from 1 to 20 stocks cut volatility by ~40% and lifted the *worst* 3-year result from −14% to +99%.
+   5 tech stocks were twice as bumpy as 5 stocks from 5 different sectors (24% vs 12% volatility).
 
 <table>
 <tr>
@@ -57,10 +60,15 @@ These are real results from this project's own data (Oct 2023 – Oct 2026):
 <tr>
 <td colspan="2"><img src="docs/images/luck_test.png" alt="Shuffle tests: real results vs 10,000 random picks of days"></td>
 </tr>
+<tr>
+<td colspan="2"><img src="docs/images/diversification.png" alt="Volatility vs number of stocks, and correlation heatmap of 22 stocks"></td>
+</tr>
 </table>
 
 ## Things I was careful about
 
+- **Split-adjusted prices.** Alpaca returns raw prices by default, which turns stock splits into
+  fake 90% crashes (NVDA, June 2024). All requests use `Adjustment.ALL`. Found while building lesson 19.
 - **No look-ahead bias.** Signals act the *next* day (`shift(1)`), and news published after the
   16:00 New York close is matched to the next trading day. Both are covered by unit tests.
 - **Trading costs** are included in backtests (0.1% per switch).
@@ -122,7 +130,7 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 ├── helpers.py                # shared tools: Alpaca clients, data download, backtest maths
 ├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
 ├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
-├── step1_connect.py … step18_ai_sentiment.py   # the lessons (see below)
+├── step1_connect.py … step19_diversification.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live section added in lesson 14)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
@@ -154,6 +162,7 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
 | 16 | `step16_luck_test.py` | Real or luck? Shuffle tests, p-values, multiple testing: numpy, random seeds, simulation |
 | 17 | `step17_news_crawler.py` | Your own polite web crawler and a growing news archive: classes, XML/RSS, HTTP, de-duplication |
 | 18 | `step18_ai_sentiment.py` | A free AI (FinBERT) reads the news on your Mac: pre-trained models, probabilities, mocks, caching |
+| 19 | `step19_diversification.py` | Diversification: random portfolios, annualised volatility, correlation heatmap, split-adjusted prices |
 
 ## Built with
 
@@ -198,6 +207,12 @@ GitHub Actions
 - **Limit order**: buy/sell only at your price or better. You pick the price, but it may never fill.
 - **Position**: a stock you currently own. **Filled**: the order actually happened.
 - **Unrealized profit/loss**: how much a position is up or down on paper, before you sell.
+- **Stock split**: a company turns each share into several cheaper ones (e.g. 1 → 10). Raw prices drop, but nobody loses money.
+- **Adjusted prices**: old prices rewritten to account for splits and dividends, so charts and returns stay honest.
+- **Diversification**: spreading money over many investments so one bad one can't sink you.
+- **Equal weight**: the same amount of money in each stock.
+- **Sector**: a group of companies in the same industry (tech, energy, banks…), which tend to move together.
+- **Rotation**: money moving out of one group of stocks and into another, so they move in opposite directions.
 
 **Testing strategies**
 - **Backtest**: replaying a trading rule on old prices to see how it would have done.
@@ -226,6 +241,8 @@ GitHub Actions
 - **NumPy**: a library for fast maths on whole lists of numbers at once.
 - **Random seed**: a starting number that makes "random" results repeatable.
 - **Histogram**: a bar chart of how often each value came up.
+- **Annualise**: turn a daily number into a yearly one (volatility: daily × √252 trading days).
+- **Heatmap**: a grid of coloured squares, where colour shows the size of each number.
 - **Class**: a bundle of data and the functions that work on it (e.g. `PoliteFetcher`).
 - **Hash**: a short fingerprint of some text; the same text always gives the same hash.
 - **De-duplication**: making sure the same item is never stored twice.
