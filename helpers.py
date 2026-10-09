@@ -14,11 +14,13 @@ The tests in tests/test_helpers.py check the maths parts automatically.
 import os
 from datetime import datetime, timedelta
 
+import certifi
 import pandas as pd
 from dotenv import load_dotenv
 from alpaca.data.enums import DataFeed
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.historical.news import NewsClient
+from alpaca.data.live import StockDataStream
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.client import TradingClient
@@ -49,6 +51,17 @@ def data_client():
 def news_client():
     """Phone line for news headlines."""
     return NewsClient(*_keys())
+
+
+def live_stream():
+    """
+    An open line where Alpaca PUSHES live prices to us as they happen (a websocket).
+    The free plan allows only ONE of these open at a time.
+    """
+    # Python from python.org on a Mac has no list of trusted certificates, so the
+    # secure connection fails ("CERTIFICATE_VERIFY_FAILED"). Borrow certifi's list.
+    os.environ.setdefault("SSL_CERT_FILE", certifi.where())
+    return StockDataStream(*_keys(), feed=DataFeed.IEX)
 
 
 def daily_closes(symbols, days=365):

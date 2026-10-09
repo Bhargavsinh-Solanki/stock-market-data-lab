@@ -28,6 +28,7 @@ cp .env.example .env               # then paste your Alpaca keys into .env
 | 10 | `step10_using_helpers.py` | Your own module (`helpers.py`) and automated tests (`tests/`) |
 | 11 | `step11_dashboard.py` | A read-only web dashboard with Streamlit: widgets, caching, charts |
 | 12 | `step12_news.py` | News headlines vs price moves: joining tables, grouping, correlation, news timing |
+| 13 | `step13_live.py` | Live streaming trades and 1-minute bars over a websocket: callbacks, async, timers |
 
 ### Opening the dashboard
 ```bash
@@ -86,3 +87,8 @@ python step9_report.py
 - **Group by**: sorting rows into buckets (e.g. by day) and counting or averaging each bucket.
 - **Correlation**: a number from -1 to +1 showing how strongly two things move together.
 - **Correlation is not causation**: two things moving together doesn't prove one causes the other.
+- **Request vs stream**: a request asks once and gets one answer (a letter); a stream stays open and data keeps arriving (a phone call).
+- **Websocket**: the technology behind a stream - a connection that stays open both ways.
+- **Callback**: a function you write but someone else (here, Alpaca's library) calls when something happens.
+- **async / await**: Python's way to wait for many things at once without freezing.
+- **SSL certificate**: a digital ID card that proves a website is who it says it is.
