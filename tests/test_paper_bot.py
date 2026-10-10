@@ -7,7 +7,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from paper_bot import BUY, HOLD, SELL, STAY_OUT, WAIT, decide, shares_for, trend_rule  # noqa: E402
+from lab.paper_bot import BUY, HOLD, SELL, STAY_OUT, WAIT, decide, shares_for, trend_rule  # noqa: E402
 
 
 def test_every_row_of_the_decision_table():

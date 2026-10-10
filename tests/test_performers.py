@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from performers import top_performers  # noqa: E402
+from lab.performers import top_performers  # noqa: E402
 
 
 def fake_closes():

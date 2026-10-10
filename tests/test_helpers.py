@@ -19,7 +19,7 @@ import pytest
 # Let this file find helpers.py, which lives one folder up.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from helpers import (  # noqa: E402
+from lab.helpers import (  # noqa: E402
     annual_volatility, backtest, biggest_drop, effective_stocks, grow_100, headline_sentiment,
     ma_rule_positions, portfolio_returns, risk_shares, shuffle_test, trading_day_for,
     weighted_returns,

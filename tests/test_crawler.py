@@ -11,7 +11,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from crawler import (  # noqa: E402
+from lab.crawler import (  # noqa: E402
     COLUMNS, PoliteFetcher, article_file, headline_key, merge_into_archive, parse_rss, site_of,
 )
 

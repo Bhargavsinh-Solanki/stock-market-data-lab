@@ -1,0 +1,15 @@
+# Describes this project as an installable Python package (Lesson 35).
+# "pip install -e ." installs the lab/ folder in EDITABLE mode: Python finds `lab`
+# from anywhere, and your edits to lab/*.py take effect immediately - no reinstall.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stock-market-data-lab"
+version = "1.0.0"
+description = "A student learning project: market data, backtests, risk forecasts and paper trading with Alpaca"
+requires-python = ">=3.12"
+
+[tool.setuptools]
+packages = ["lab"]

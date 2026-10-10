@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from portfolio import (  # noqa: E402
+from lab.portfolio import (  # noqa: E402
     mirror_status, normalise, rebalance_orders, simulate, transition_plan, yearly_stats,
 )
 
@@ -61,7 +61,7 @@ def test_yearly_stats_splits_by_calendar_year():
 
 
 def test_analyse_leaves_out_holdings_without_enough_history(monkeypatch):
-    import portfolio
+    from lab import portfolio
 
     days = pd.bdate_range("2025-01-01", periods=300)
     rng = np.random.default_rng(2)

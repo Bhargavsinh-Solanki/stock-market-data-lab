@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from currency import split_return, to_euro_prices, to_euro_returns  # noqa: E402
+from lab.currency import split_return, to_euro_prices, to_euro_returns  # noqa: E402
 
 DAYS = pd.bdate_range("2026-01-05", periods=3)
 

@@ -7,8 +7,8 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from emailer import send_email  # noqa: E402
-from report import build_html, check_rules  # noqa: E402
+from lab.emailer import send_email  # noqa: E402
+from lab.report import build_html, check_rules  # noqa: E402
 
 HOLDINGS = pd.DataFrame({
     "name": ["Nvidia", "Zscaler", "MSCI World"],
@@ -80,7 +80,7 @@ class RefusingSMTP(FakeSMTP):
 
 def test_refused_login_gives_a_clear_error():
     import pytest
-    from emailer import EmailError
+    from lab.emailer import EmailError
 
     settings = {"to": "me@example.com", "user": "bot@example.com", "password": "x",
                 "host": "smtp.example.com", "port": 465}
@@ -89,7 +89,7 @@ def test_refused_login_gives_a_clear_error():
 
 
 def test_risk_section_appears_only_when_given():
-    from risk_forecast import monthly_ranges
+    from lab.risk_forecast import monthly_ranges
 
     risk = (monthly_ranges({"NVDA": 37.0}), monthly_ranges({"Whole mix": 26.0}), ["BAYRY"])
     with_risk = build_html(TODAY, TODAY, 1.0, [], [], [], pd.Timestamp("2026-10-10"), risk=risk)

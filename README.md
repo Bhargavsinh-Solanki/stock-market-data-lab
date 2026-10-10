@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **34 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **35 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -104,35 +104,36 @@ cd stock-market-data-lab
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .                   # makes lab/ importable (one time)
 cp .env.example .env        # then paste your Alpaca paper keys into .env
 ```
 
 Check everything works:
 
 ```bash
-python step1_connect.py     # should print "Connected to Alpaca!"
+python lessons/step1_connect.py     # should print "Connected to Alpaca!"
 pytest                      # runs the unit tests (no keys needed)
 ```
 
 Open the dashboard:
 
 ```bash
-python -m streamlit run step11_dashboard.py
+python -m streamlit run lessons/step11_dashboard.py
 ```
 It opens at http://localhost:8501. Press Ctrl+C in the terminal to stop it.
 
 ### Daily routine (run by hand after the US market closes)
 ```bash
-python step8_bot.py           # dry run: shows what the bot would do
-python step8_bot.py --trade   # sends the paper orders
-python step9_report.py        # report card for the paper account
+python lessons/step8_bot.py           # dry run: shows what the bot would do
+python lessons/step8_bot.py --trade   # sends the paper orders
+python lessons/step9_report.py        # report card for the paper account
 ```
 
 ### Run the crawler automatically (optional)
 macOS has a built-in scheduler called **cron**. To grow the news archive every 2 hours on weekdays,
 run `crontab -e`, paste this one line (change the folder path if yours differs), save and close:
 ```
-0 */2 * * 1-5 cd ~/Github/global-political-trades-forecast && .venv/bin/python step17_news_crawler.py >> data/crawler.log 2>&1
+0 */2 * * 1-5 cd ~/Github/global-political-trades-forecast && .venv/bin/python lessons/step17_news_crawler.py >> data/crawler.log 2>&1
 ```
 Check it's there with `crontab -l`. Remove it again with `crontab -e` (delete the line).
 Cron skips runs while the Mac is asleep or off, which is fine: the next run catches up on new headlines.
@@ -143,50 +144,53 @@ Cron skips runs while the Mac is asleep or off, which is fine: the next run catc
    `SMTP_PASSWORD` to `.env` (see `.env.example`).
 2. Check the settings, preview, then send one to yourself:
    ```bash
-   python emailer.py --test
-   python step26_daily_email.py
-   python step26_daily_email.py --send
+   python -m lab.emailer --test
+   python lessons/step26_daily_email.py
+   python lessons/step26_daily_email.py --send
    ```
    A failed email never crashes the bot; resend a saved one with
-   `python emailer.py --resend data/paper_bot_email.html`.
+   `python -m lab.emailer --resend data/paper_bot_email.html`.
 3. To get it every weekday at 22:30 (after the US close), add a second cron line:
    ```
-   30 22 * * 1-5 cd ~/Github/global-political-trades-forecast && .venv/bin/python step26_daily_email.py --send >> data/email.log 2>&1
+   30 22 * * 1-5 cd ~/Github/global-political-trades-forecast && .venv/bin/python lessons/step26_daily_email.py --send >> data/email.log 2>&1
    ```
 
 ### Paper bot with email (optional)
 ```bash
-python step27_paper_bot.py                  # dry run: decisions + email preview, sends nothing
-python step27_paper_bot.py --trade --email  # sends PAPER orders and emails you the summary
+python lessons/step27_paper_bot.py                  # dry run: decisions + email preview, sends nothing
+python lessons/step27_paper_bot.py --trade --email  # sends PAPER orders and emails you the summary
 ```
 To run it every weekday at 16:00 (30 minutes after the US open, Central European time):
 ```
-0 16 * * 1-5 cd ~/Github/global-political-trades-forecast && .venv/bin/python step27_paper_bot.py --trade --email >> data/paper_bot.log 2>&1
+0 16 * * 1-5 cd ~/Github/global-political-trades-forecast && .venv/bin/python lessons/step27_paper_bot.py --trade --email >> data/paper_bot.log 2>&1
 ```
 
 ## Project structure
 
 ```
-├── helpers.py                # shared tools: Alpaca clients, data download, backtest maths
-├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
-├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
-├── portfolio.py              # portfolio health check + what-if simulator calculations
-├── performers.py             # top performers: past returns + next month's risk range
-├── currency.py               # euro view: EUR/USD via the FXE fund, converting $ results into €
-├── report.py                 # daily report: market moves, your rule checks, headlines, HTML
-├── emailer.py                # sends email over SMTP using settings from .env
-├── paper_bot.py              # the paper bot's decision table (buy / hold / sell / stay out)
-├── risk_forecast.py          # volatility forecasts (windows + EWMA) and walk-forward evaluation
-├── step1_connect.py … step33_euro_view.py   # the lessons (see below)
-├── step11_dashboard.py       # Streamlit dashboard (rebuilt for beginners in lesson 32)
-├── tests/                    # unit tests on fake data (no internet or keys needed)
-├── .github/workflows/        # CI: runs the tests on every push
-├── docs/images/              # charts used in this README
-├── data/                     # generated CSVs, charts, logs (not committed)
-├── requirements.txt
-├── .env.example              # template for your API keys
-└── my_portfolio.example.csv  # template for your real holdings (your my_portfolio.csv stays private)
+├── lab/                        # the shared code - an installable Python package
+│   ├── helpers.py              #   Alpaca clients, data download, backtest maths
+│   ├── portfolio.py            #   health check, what-if, ETF plan, rebalancing, mirror status
+│   ├── risk_forecast.py        #   volatility forecasts (windows + EWMA), walk-forward tests
+│   ├── performers.py           #   top performers: past returns + next month's risk range
+│   ├── currency.py             #   euro view: EUR/USD via the FXE fund
+│   ├── crawler.py              #   polite news crawler: RSS, archive, robots.txt, article text
+│   ├── ai_sentiment.py         #   FinBERT sentiment, run locally, with a score cache
+│   ├── report.py / emailer.py  #   daily email report and SMTP sending
+│   └── paper_bot.py            #   the paper bot's decision table
+├── lessons/                    # the lesson scripts, step1_connect.py … step33_euro_view.py
+│   └── step11_dashboard.py     #   the Streamlit dashboard
+├── tests/                      # 74 tests on fake data (no internet or keys needed)
+├── pyproject.toml              # describes lab/ as a package ("pip install -e .")
+├── requirements.txt            # the libraries the project needs
+├── .github/workflows/          # CI: runs the tests on every push
+├── docs/images/                # charts used in this README
+├── data/                       # generated CSVs, charts, logs (not committed)
+├── .env.example                # template for your API keys
+└── my_portfolio.example.csv    # template for your real holdings (yours stays private)
 ```
+
+Run everything **from the project folder**, e.g. `python lessons/step5_backtest.py`.
 
 ## Lessons
 
@@ -226,6 +230,7 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 | 32 | `performers.py` + dashboard | Top performers and a beginner-friendly redesign: Home summary, explainer boxes, column_config, honest forecasts |
 | 33 | `step33_euro_view.py` | Results in euros: exchange rates, splitting a return into company + currency, a € / $ switch on the dashboard |
 | 34 | `tests/test_dashboard.py` | Testing the whole dashboard: AppTest, fake data sources, pytest fixtures, proving a test can fail |
+| 35 | `lab/` + `lessons/` + `pyproject.toml` | Tidying into a Python package: folders, git mv, editable installs, updating every path |
 
 ## Built with
 
@@ -338,6 +343,8 @@ GitHub Actions
 - **Monkeypatching**: temporarily swapping a function for a fake one in a test (e.g. no real download).
 - **Fixture**: setup code pytest runs before each test that asks for it (e.g. "use a fake Alpaca").
 - **UI test**: a test that runs the actual app and checks the page, instead of single functions.
+- **Package**: a folder of modules Python can import by name (`from lab.helpers import ...`).
+- **Editable install** (`pip install -e .`): install your own package so edits take effect without reinstalling.
 - **Twin axis**: a chart with two y-axes, so two different units (e.g. € and %) can share one picture.
 - **HTML**: the language of web pages, also used for formatted emails.
 - **SMTP**: the standard way programs send email.

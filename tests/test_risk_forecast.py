@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from risk_forecast import evaluate, ewma_volatility, forecasts, realised_next  # noqa: E402
+from lab.risk_forecast import evaluate, ewma_volatility, forecasts, realised_next  # noqa: E402
 
 DAYS = pd.bdate_range("2020-01-01", periods=800)
 
@@ -55,7 +55,7 @@ def test_evaluate_returns_one_row_per_method():
 
 
 def test_monthly_ranges():
-    from risk_forecast import monthly_ranges
+    from lab.risk_forecast import monthly_ranges
 
     table = monthly_ranges({"CALM": 12})  # 12% a year
     row = table.loc["CALM"]

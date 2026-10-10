@@ -24,10 +24,10 @@ from streamlit.testing.v1 import AppTest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import currency  # noqa: E402
-import helpers  # noqa: E402
-import portfolio  # noqa: E402
-import report  # noqa: E402
+from lab import currency  # noqa: E402
+from lab import helpers  # noqa: E402
+from lab import portfolio  # noqa: E402
+from lab import report  # noqa: E402
 
 HOLDINGS = ["SPY", "NVDA", "AAPL", "TSLA"]
 
@@ -104,7 +104,7 @@ def fake_alpaca(monkeypatch, tmp_path):
 
 
 def run_dashboard():
-    app = AppTest.from_file(str(ROOT / "step11_dashboard.py"), default_timeout=60)
+    app = AppTest.from_file(str(ROOT / "lessons" / "step11_dashboard.py"), default_timeout=60)
     app.run()
     return app
 
