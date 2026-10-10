@@ -86,3 +86,19 @@ def test_refused_login_gives_a_clear_error():
                 "host": "smtp.example.com", "port": 465}
     with pytest.raises(EmailError, match="App Password"):
         send_email("Hello", "<p>Report</p>", settings=settings, smtp_class=RefusingSMTP)
+
+
+def test_risk_section_appears_only_when_given():
+    from risk_forecast import monthly_ranges
+
+    risk = (monthly_ranges({"NVDA": 37.0}), monthly_ranges({"Whole mix": 26.0}), ["BAYRY"])
+    with_risk = build_html(TODAY, TODAY, 1.0, [], [], [], pd.Timestamp("2026-10-10"), risk=risk)
+    without = build_html(TODAY, TODAY, 1.0, [], [], [], pd.Timestamp("2026-10-10"))
+    assert "Next month's normal range" in with_risk and "BAYRY" in with_risk
+    assert "Next month's normal range" not in without
+
+
+def test_long_headlines_are_shortened():
+    news = [("SPY", "word " * 100, "https://example.com/a")]
+    page = build_html(TODAY, TODAY, 1.0, [], [], news, pd.Timestamp("2026-10-10"))
+    assert "word " * 40 not in page and "…" in page

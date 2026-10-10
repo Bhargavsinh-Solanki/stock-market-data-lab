@@ -52,3 +52,13 @@ def test_evaluate_returns_one_row_per_method():
     table = evaluate(calm_then_wild())
     assert set(table.index) == {"last month", "3 months", "1 year", "EWMA"}
     assert (table["checks"] > 0).all()
+
+
+def test_monthly_ranges():
+    from risk_forecast import monthly_ranges
+
+    table = monthly_ranges({"CALM": 12})  # 12% a year
+    row = table.loc["CALM"]
+    assert row["volatility_%"] == pytest.approx(12)
+    assert row["typical_%"] == pytest.approx(12 / 12 ** 0.5)       # about 3.46% a month
+    assert row["bad_%"] == pytest.approx(-1.65 * 12 / 12 ** 0.5)

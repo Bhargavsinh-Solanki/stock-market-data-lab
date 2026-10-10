@@ -121,12 +121,38 @@ def _table(df, columns):
     return f'<table style="border-collapse:collapse;font-size:14px"><tr>{head}</tr>{body}</table>'
 
 
-def build_html(market, mine, portfolio_day, missing, alerts, news, date):
-    """One HTML page with every section. html.escape() makes any text safe to show."""
+def risk_html(per_holding, mix, left_out):
+    """The 'next month's normal range' section (Lesson 29)."""
+    m = mix.iloc[0]
+    rows = "".join(
+        f'<tr><td style="padding:2px 8px"><b>{html.escape(s)}</b></td>'
+        f'<td style="text-align:right;padding:2px 8px">{r["volatility_%"]:.0f}%</td>'
+        f'<td style="text-align:right;padding:2px 8px">±{r["typical_%"]:.1f}%</td>'
+        f'<td style="text-align:right;padding:2px 8px;color:#cf222e">{r["bad_%"]:.1f}%</td></tr>'
+        for s, r in per_holding.iterrows())
+    note = f"<p style='color:#57606a'>No forecast for: {', '.join(left_out)}.</p>" if left_out else ""
+    return f"""<h3>Next month's normal range (risk forecast)</h3>
+<p>Your whole mix: in about <b>2 months out of 3</b> the month's move stays within
+<b>±{m["typical_%"]:.1f}%</b>; roughly <b>1 month in 20</b> is worse than <b>{m["bad_%"]:.1f}%</b>.
+This says how much prices may swing - not which way. A rough guide: real markets have more
+extreme days than it assumes.</p>
+<table style="border-collapse:collapse;font-size:14px"><tr><th></th>
+<th style="padding:2px 8px">Volatility / year</th><th style="padding:2px 8px">Typical month</th>
+<th style="padding:2px 8px">Rough bad month</th></tr>{rows}</table>{note}"""
+
+
+def build_html(market, mine, portfolio_day, missing, alerts, news, date, risk=None):
+    """
+    One HTML page with every section. html.escape() makes any text safe to show.
+    risk: optional (per_holding, mix, left_out) from risk_forecast.forecast_holdings()
+    """
     columns = ["", "Name", "1 day", "~1 month"]
     alert_html = ("".join(f"<li>{html.escape(a)}</li>" for a in alerts)
                   or "<li>None of your rules are broken today.</li>")
-    news_html = "".join(f'<li><b>{s}</b>: <a href="{html.escape(u)}">{html.escape(h)}</a></li>'
+    def short(text, limit=140):  # some "headlines" are whole social-media posts
+        return text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0] + "…"
+
+    news_html = "".join(f'<li><b>{s}</b>: <a href="{html.escape(u)}">{html.escape(short(h))}</a></li>'
                         for s, h, u in news) or "<li>No headlines in the last 24 hours.</li>"
     missing_note = (f"<p style='color:#57606a'>No price data for: {', '.join(missing)}.</p>"
                     if missing else "")
@@ -139,6 +165,7 @@ def build_html(market, mine, portfolio_day, missing, alerts, news, date):
 on the latest trading day (today so far, if the US market is still open; in US dollars,
 the euro exchange rate is not included).</p>
 {_table(mine, columns)}{missing_note}
+{risk_html(*risk) if risk else ""}
 <h3>Market overview</h3>{_table(market, columns)}
 <h3>Headlines for your holdings</h3><ul>{news_html}</ul>
 <p style="color:#57606a;font-size:12px">Facts only, from the free Alpaca/IEX feed. This report is

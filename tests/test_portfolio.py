@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from portfolio import normalise, simulate, transition_plan, yearly_stats  # noqa: E402
+from portfolio import normalise, rebalance_orders, simulate, transition_plan, yearly_stats  # noqa: E402
 
 
 def fake_returns():
@@ -111,3 +111,25 @@ def test_plan_rows_are_months_even_for_a_named_column():
     values = pd.Series(HOLDINGS, name="value_eur")
     plan = transition_plan(values, {"URTH": 1}, months=2)
     assert list(plan.index) == [0, 1, 2]
+
+
+# --- rebalance_orders (Lesson 30) -------------------------------------------------------
+
+def test_rebalance_buys_sells_and_closes():
+    current = {"TSLA": 3800, "NVDA": 230, "ZS": 5000}
+    target = {"NVDA": 593, "ZS": 807, "URTH": 410}
+    orders = rebalance_orders(current, target)
+    assert orders["TSLA"] == -3800          # not in the target -> sell it all
+    assert orders["ZS"] == -4193            # too big -> sell the difference
+    assert orders["NVDA"] == 363            # too small -> buy the difference
+    assert orders["URTH"] == 410            # not held yet -> buy it
+    assert orders.iloc[0] < 0 < orders.iloc[-1]  # sells come first, buys last
+
+
+def test_rebalance_skips_tiny_trades():
+    orders = rebalance_orders({"SPY": 309.6}, {"SPY": 310}, min_trade=1)
+    assert orders.empty
+
+
+def test_rebalance_of_a_match_does_nothing():
+    assert rebalance_orders({"A": 100, "B": 50}, {"A": 100, "B": 50}).empty

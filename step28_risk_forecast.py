@@ -22,12 +22,11 @@ import os
 from datetime import datetime
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
 from helpers import daily_closes
-from portfolio import current_weights, returns_with_history
-from risk_forecast import HORIZON, evaluate, ewma_volatility, forecasts, realised_next, return_forecast_check
+from portfolio import current_weights
+from risk_forecast import HORIZON, evaluate, forecast_holdings, forecasts, realised_next, return_forecast_check
 
 UNIVERSE = ["AAPL", "MSFT", "NVDA", "AMD", "GOOGL", "META", "AMZN", "TSLA", "NFLX", "WMT", "COST",
             "HD", "KO", "PEP", "JPM", "BAC", "GS", "XOM", "CVX", "JNJ", "PFE", "CAT",
@@ -61,27 +60,20 @@ if os.path.exists("my_portfolio.csv"):
 else:
     values = current_weights()
     source = "your paper account"
-weights = values / values.sum()
+per_holding, mix, left_out = forecast_holdings(values, method=best)
 
-held, left_out = returns_with_history(weights.index, days=400, min_days=63)
-latest = {name: f.iloc[-1] for name, f in forecasts(held).items()}
-method = best if latest[best].notna().all() else "EWMA"  # EWMA works even with short history
-vol = latest[method].sort_values(ascending=False)
-
-print(f"\nPart 3 - next month for {source} (method: {method}):")
+print(f"\nPart 3 - next month for {source} (method: {best}, EWMA for very new listings):")
 if left_out:
     print(f"  (no forecast - too little price history: {', '.join(left_out)})")
 print(f"  {'':<6}{'expected volatility':>20}{'typical month (2 in 3)':>25}{'rough bad month (1 in 20)':>28}")
-for s, v in vol.items():
-    month = v / np.sqrt(12)  # yearly volatility -> one month
-    print(f"  {s:<6}{v:>19.1f}%{'±' + format(month, '.1f') + '%':>25}{-1.65 * month:>27.1f}%")
+for s, r in per_holding.iterrows():
+    print(f"  {s:<6}{r['volatility_%']:>19.1f}%{'±' + format(r['typical_%'], '.1f') + '%':>25}"
+          f"{r['bad_%']:>27.1f}%")
 
-w = weights[held.columns] / weights[held.columns].sum()
-portfolio_vol = ewma_volatility(held @ w).iloc[-1]
-month = portfolio_vol / np.sqrt(12)
-print(f"\n  Whole mix (EWMA): about {portfolio_vol:.1f}% a year  ->  in about 2 months out of 3, "
-      f"the month's move stays within ±{month:.1f}%;\n  roughly 1 month in 20 is worse than "
-      f"{-1.65 * month:.1f}%. (A rough guide: real markets have more extreme days than this assumes.)")
+m = mix.iloc[0]
+print(f"\n  Whole mix (EWMA): about {m['volatility_%']:.1f}% a year  ->  in about 2 months out of 3, "
+      f"the month's move stays within ±{m['typical_%']:.1f}%;\n  roughly 1 month in 20 is worse than "
+      f"{m['bad_%']:.1f}%. (A rough guide: real markets have more extreme days than this assumes.)")
 print("\nA risk forecast says how much prices may swing, not which way. Not investment advice.")
 
 # --- Chart: forecast vs what happened -----------------------------------------------------------

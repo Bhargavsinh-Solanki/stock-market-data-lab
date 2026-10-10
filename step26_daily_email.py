@@ -6,6 +6,7 @@ Every run builds a report with:
   - YOUR HOLDINGS: how each moved, and your estimated portfolio move
   - MARKET OVERVIEW: S&P 500, MSCI World, Nasdaq and the main sectors
   - HEADLINES for your holdings from the last 24 hours
+  - NEXT MONTH'S NORMAL RANGE: the Lesson 28 risk forecast (added in Lesson 29)
 
 Facts and your own rules only - it never says what to buy, hold or sell.
 
@@ -29,6 +30,7 @@ from datetime import datetime
 import pandas as pd
 
 from report import build_html, check_rules, headlines, holdings_moves, market_overview
+from risk_forecast import forecast_holdings
 
 # ======================= YOUR RULES - set these to YOUR own limits =======================
 RULES = {
@@ -49,8 +51,9 @@ market = market_overview()
 mine, portfolio_day, missing = holdings_moves(holdings)
 alerts = check_rules(holdings, mine, RULES)
 news = headlines(list(holdings.index))
+risk = forecast_holdings(holdings["value_eur"])  # Lesson 29: next month's normal range
 
-report = build_html(market, mine, portfolio_day, missing, alerts, news, today)
+report = build_html(market, mine, portfolio_day, missing, alerts, news, today, risk=risk)
 os.makedirs("data", exist_ok=True)
 with open("data/daily_report.html", "w") as f:
     f.write(report)
@@ -58,6 +61,7 @@ with open("data/daily_report.html", "w") as f:
 print(f"  Your holdings: about {portfolio_day:+.2f}% on the latest trading day (today so far if the market is open)")
 print(f"  S&P 500: {market.loc['SPY', 'day_%']:+.2f}%   MSCI World: {market.loc['URTH', 'day_%']:+.2f}%")
 print(f"  {len(alerts)} rule alert(s), {len(news)} headline(s)")
+print(f"  Next month's normal range for your mix: ±{risk[1].iloc[0]['typical_%']:.1f}% (2 months in 3)")
 for a in alerts:
     print(f"   - {a}")
 print("Saved preview: data/daily_report.html")

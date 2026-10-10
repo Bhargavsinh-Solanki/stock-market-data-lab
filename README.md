@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **28 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **30 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -24,7 +24,7 @@ It's built as **28 small, heavily commented lessons**, each one adding a new cod
 | **Backtesting & statistics** | Moving-average strategy vs buy & hold, trading costs, train/test split, shuffle (permutation) tests across 12 stocks |
 | **Paper trading** | Market and limit orders, dry-run-first bots (lesson 8, and lesson 27 with a cash check and email summaries) with watchlists and decision logs, a read-only portfolio health check (money vs risk share, effective number of stocks, overlap) |
 | **Dashboard** | Streamlit app with tabs: live-updating intraday chart, account value, positions, bot log, a portfolio health page, and a what-if simulator with sliders |
-| **Daily email** | Facts-only market report: your rule alerts, your holdings' moves, market and sector overview, headlines |
+| **Daily email** | Facts-only market report: your rule alerts, your holdings' moves, next month's normal range (risk forecast), market and sector overview, headlines |
 | **Engineering** | Shared `helpers` module, unit tests with pytest, CI on GitHub Actions |
 
 ## Key findings
@@ -175,7 +175,7 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 ├── emailer.py                # sends email over SMTP using settings from .env
 ├── paper_bot.py              # the paper bot's decision table (buy / hold / sell / stay out)
 ├── risk_forecast.py          # volatility forecasts (windows + EWMA) and walk-forward evaluation
-├── step1_connect.py … step28_risk_forecast.py   # the lessons (see below)
+├── step1_connect.py … step30_mirror.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (live: lesson 14, health tab: 21, what-if tab: 22)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
@@ -218,6 +218,8 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 | 26 | `step26_daily_email.py` | Daily email report: HTML, SMTP and App Passwords, escaping, fake servers in tests, safe-by-default |
 | 27 | `step27_paper_bot.py` | Paper-trading bot that emails its decisions: pure decision functions, cash check, combining modules |
 | 28 | `step28_risk_forecast.py` | Forecasting next month's volatility: walk-forward testing, EWMA, risk vs return forecasts |
+| 29 | `report.py` + `risk_forecast.py` | Risk forecast in the daily email: one shared function for two outputs, optional sections, trimming long text |
+| 30 | `step30_mirror.py` | Mirror a real portfolio in the paper account: rebalancing, notional (fractional) orders, per-order error handling |
 
 ## Built with
 
@@ -269,6 +271,8 @@ GitHub Actions
 - **Hedge**: a holding that tends to move against the rest, so it can *reduce* total risk (a negative risk share).
 - **UCITS**: the EU standard for funds; EU investors usually buy UCITS ETFs rather than US-listed ones.
 - **Order fee**: what a platform charges per buy or sell; many small orders can add up to a big share of a small portfolio.
+- **Rebalancing**: trading so your holdings match a target mix again (target − current = the trades).
+- **Notional order / fractional shares**: buying a dollar amount ("$593 of NVDA") instead of whole shares.
 - **Persistence**: whether something stays similar from one period to the next (volatility does; returns don't).
 - **Walk-forward test**: forecast, wait, check, repeat - only ever using data from before each forecast.
 - **EWMA**: an average where recent days count more and older days fade away ("RiskMetrics", λ = 0.94).

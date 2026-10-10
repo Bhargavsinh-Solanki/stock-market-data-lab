@@ -156,6 +156,20 @@ def transition_plan(values, etf_split, months, keep=()):
     return pd.DataFrame(plan).reset_index(drop=True).rename_axis("month")
 
 
+def rebalance_orders(current, target, min_trade=1.0):
+    """
+    The trades that turn `current` holdings into `target` holdings (Lesson 30).
+    Both are {symbol: dollars}. Returns {symbol: dollars to trade}:
+      positive = buy that many dollars, negative = sell, and a symbol that's held but
+      not in the target is sold completely. Tiny trades (under `min_trade`) are skipped.
+    """
+    current = pd.Series(current, dtype=float)
+    target = pd.Series(target, dtype=float)
+    symbols = current.index.union(target.index)
+    change = target.reindex(symbols, fill_value=0) - current.reindex(symbols, fill_value=0)
+    return change[change.abs() >= min_trade].sort_values()  # sells (negative) first
+
+
 def analyse(values, days=365, benchmarks=("SPY",), min_days=200, total=None):
     """
     The health check for ANY set of holdings (Lessons 20-24).

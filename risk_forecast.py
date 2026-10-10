@@ -79,3 +79,40 @@ def return_forecast_check(returns, horizon=HORIZON, start=252):
     pairs = pd.DataFrame({"past": past.loc[checkpoints].stack(),
                           "future": future.loc[checkpoints].stack()}).dropna()
     return pairs["past"].rank().corr(pairs["future"].rank())
+
+
+# --- Everyday terms (Lessons 28-29) -----------------------------------------------------
+
+BAD_MONTH_FACTOR = 1.65  # with a bell-curve, about 1 month in 20 falls more than 1.65 typical moves
+
+
+def monthly_ranges(volatility):
+    """
+    Turn yearly volatility (%) into everyday terms for ONE month:
+      typical_% : in about 2 months out of 3, the move stays within ± this
+      bad_%     : roughly 1 month in 20 is worse than this (a rough guide - real markets
+                  have more extreme days than the bell-curve assumes)
+    """
+    volatility = pd.Series(volatility, dtype=float)
+    typical = volatility / np.sqrt(12)  # a year has 12 months; swings grow with sqrt(time)
+    return pd.DataFrame({"volatility_%": volatility, "typical_%": typical,
+                         "bad_%": -BAD_MONTH_FACTOR * typical})
+
+
+def forecast_holdings(values, method="3 months", min_days=63):
+    """
+    Next month's risk for a set of holdings, e.g. {"NVDA": 593, "SPY": 310}.
+    Returns (per-holding ranges, whole-mix ranges as a 1-row table, symbols left out).
+    Falls back to EWMA when a holding is too new for `method`.
+    """
+    from portfolio import returns_with_history  # imported here: portfolio needs a data download
+
+    values = pd.Series(values, dtype=float)
+    held, left_out = returns_with_history(values.index, days=400, min_days=min_days)
+    latest = {name: f.iloc[-1] for name, f in forecasts(held).items()}
+    vol = latest[method] if latest[method].notna().all() else latest["EWMA"]
+
+    weights = values[held.columns] / values[held.columns].sum()
+    mix_vol = ewma_volatility(held @ weights).iloc[-1]
+    return (monthly_ranges(vol).sort_values("volatility_%", ascending=False),
+            monthly_ranges({"Whole mix": mix_vol}), left_out)
