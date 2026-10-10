@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **33 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **34 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -25,7 +25,7 @@ It's built as **33 small, heavily commented lessons**, each one adding a new cod
 | **Paper trading** | Market and limit orders, dry-run-first bots (lesson 8, and lesson 27 with a cash check and email summaries) with watchlists and decision logs, a read-only portfolio health check (money vs risk share, effective number of stocks, overlap) |
 | **Dashboard** | Beginner-friendly Streamlit app: a plain-English Home page, your real portfolio (profit, risk range, paper-mirror status), top performers with next month's swing range, live prices, the paper account and a what-if simulator - with explanations and a word list throughout |
 | **Daily email** | Facts-only market report: your rule alerts, your holdings' moves, next month's normal range (risk forecast), market and sector overview, headlines |
-| **Engineering** | Shared `helpers` module, unit tests with pytest, CI on GitHub Actions |
+| **Engineering** | Shared modules, 70+ unit tests with pytest, dashboard tests with Streamlit AppTest and a fake Alpaca, CI on GitHub Actions |
 
 ## Key findings
 
@@ -225,6 +225,7 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 | 31 | `portfolio.py` + dashboard | Real-portfolio tab: profit, risk range and mirror status on one page - reusing modules in a UI |
 | 32 | `performers.py` + dashboard | Top performers and a beginner-friendly redesign: Home summary, explainer boxes, column_config, honest forecasts |
 | 33 | `step33_euro_view.py` | Results in euros: exchange rates, splitting a return into company + currency, a € / $ switch on the dashboard |
+| 34 | `tests/test_dashboard.py` | Testing the whole dashboard: AppTest, fake data sources, pytest fixtures, proving a test can fail |
 
 ## Built with
 
@@ -335,6 +336,8 @@ GitHub Actions
 - **Floating-point error**: tiny leftovers in computer maths (0.1 + 0.2 = 0.30000000000000004).
 - **Recursion**: a function that calls itself; without a stopping point it runs until Python gives up.
 - **Monkeypatching**: temporarily swapping a function for a fake one in a test (e.g. no real download).
+- **Fixture**: setup code pytest runs before each test that asks for it (e.g. "use a fake Alpaca").
+- **UI test**: a test that runs the actual app and checks the page, instead of single functions.
 - **Twin axis**: a chart with two y-axes, so two different units (e.g. € and %) can share one picture.
 - **HTML**: the language of web pages, also used for formatted emails.
 - **SMTP**: the standard way programs send email.
