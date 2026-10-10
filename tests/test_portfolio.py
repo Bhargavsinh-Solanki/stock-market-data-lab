@@ -9,7 +9,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from portfolio import normalise, rebalance_orders, simulate, transition_plan, yearly_stats  # noqa: E402
+from portfolio import (  # noqa: E402
+    mirror_status, normalise, rebalance_orders, simulate, transition_plan, yearly_stats,
+)
 
 
 def fake_returns():
@@ -133,3 +135,17 @@ def test_rebalance_skips_tiny_trades():
 
 def test_rebalance_of_a_match_does_nothing():
     assert rebalance_orders({"A": 100, "B": 50}, {"A": 100, "B": 50}).empty
+
+
+# --- mirror_status (Lesson 31) -----------------------------------------------------------
+
+def test_mirror_status_labels_each_holding():
+    real = {"NVDA": 593, "ZS": 807, "URTH": 410, "JNJ": 102}
+    paper = {"NVDA": 600, "ZS": 5000, "URTH": 200, "TSLA": 3800}  # JNJ not bought yet
+    table = mirror_status(paper, real)
+    assert table.loc["NVDA", "status"] == "in sync"      # 600 vs 593: within 5%
+    assert table.loc["ZS", "status"] == "too much"
+    assert table.loc["URTH", "status"] == "too little"
+    assert table.loc["JNJ", "status"] == "too little"    # missing counts as too little
+    assert table.loc["TSLA", "status"] == "extra"
+    assert table.loc["TSLA", "difference_$"] == 3800

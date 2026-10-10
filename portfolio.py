@@ -170,6 +170,32 @@ def rebalance_orders(current, target, min_trade=1.0):
     return change[change.abs() >= min_trade].sort_values()  # sells (negative) first
 
 
+def mirror_status(paper, real, tolerance_pct=5.0):
+    """
+    Compare the paper account with your real portfolio, holding by holding (Lesson 31).
+    paper, real: {symbol: dollars}. Each holding gets a status:
+      "in sync"     paper is within ±tolerance_pct % of the real amount
+      "too much"    paper holds noticeably more
+      "too little"  paper holds noticeably less (or none yet)
+      "extra"       held in paper but not in your real portfolio
+    """
+    paper = pd.Series(paper, dtype=float)
+    real = pd.Series(real, dtype=float)
+    table = pd.DataFrame({"real_$": real, "paper_$": paper}).fillna(0.0)
+    table["difference_$"] = table["paper_$"] - table["real_$"]
+
+    def status(row):
+        if row["real_$"] == 0:
+            return "extra"
+        gap = row["difference_$"] / row["real_$"] * 100
+        if abs(gap) <= tolerance_pct:
+            return "in sync"
+        return "too much" if gap > 0 else "too little"
+
+    table["status"] = table.apply(status, axis=1)
+    return table.sort_values("real_$", ascending=False)
+
+
 def analyse(values, days=365, benchmarks=("SPY",), min_days=200, total=None):
     """
     The health check for ANY set of holdings (Lessons 20-24).

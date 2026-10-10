@@ -26,7 +26,8 @@ import streamlit as st
 from alpaca.trading.requests import GetPortfolioHistoryRequest
 
 from helpers import daily_closes, latest_session_minutes, latest_trade, trading_client
-from portfolio import health_check, simulate
+from portfolio import health_check, mirror_status, simulate
+from risk_forecast import forecast_holdings
 
 LOG_FILE = "data/bot_log.csv"
 
@@ -68,6 +69,13 @@ def load_equity(period):
 @st.cache_data(ttl=600)
 def load_health_check():
     return health_check()  # the same calculations as step20, shared via portfolio.py
+
+
+@st.cache_data(ttl=3600)
+def load_risk(values):
+    """Next month's risk for your real holdings. `values` is a tuple of (symbol, €) pairs,
+    because cached inputs must be unchangeable."""
+    return forecast_holdings(dict(values))
 
 
 @st.cache_data(ttl=3600)
@@ -145,7 +153,8 @@ def live_section():
 
 # --- LESSON 21: TABS - separate pages inside one app -----------------------------------
 # Streamlit runs the code for EVERY tab on each refresh, so the slow health check is cached.
-overview_tab, health_tab, whatif_tab = st.tabs(["📊 Overview", "🩺 Portfolio health", "🧪 What-if"])
+overview_tab, health_tab, whatif_tab, mine_tab = st.tabs(
+    ["📊 Overview", "🩺 Portfolio health", "🧪 What-if", "💼 My real portfolio"])
 
 with overview_tab:
     st.subheader(f"🔴 Live: {symbol} today")
@@ -342,3 +351,73 @@ with whatif_tab:
                                     "Risk %": after["risk_%"]}).fillna(0)
                 st.dataframe(mix[mix["Money %"] > 0].sort_values("Money %", ascending=False)
                              .style.format(precision=1), width="stretch")
+
+
+# --- The "My real portfolio" tab (Lesson 31) ---------------------------------------------
+# Brings Lessons 24 (profit), 28 (risk forecast) and 30 (mirror check) together on one page.
+# my_portfolio.csv never leaves your Mac: the dashboard runs locally (localhost).
+with mine_tab:
+    if not os.path.exists("my_portfolio.csv"):
+        st.info("No my_portfolio.csv yet - copy my_portfolio.example.csv and fill in your holdings.")
+    else:
+        real = pd.read_csv("my_portfolio.csv").set_index("symbol")
+        total, profit = real["value_eur"].sum(), real["profit_eur"].sum()
+        paid = total - profit
+        st.caption("Your real holdings from my_portfolio.csv (private, never uploaded) · "
+                   "facts only, not financial advice")
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Total value", f"€{total:,.2f}")
+        c2.metric("Profit", f"€{profit:+,.2f}", f"{profit / paid:+.1%} on €{paid:,.0f} paid")
+        c3.metric("Holdings", len(real))
+        risk = load_risk(tuple(real["value_eur"].items()))
+        c4.metric("Typical month (2 in 3)", f"±{risk[1].iloc[0]['typical_%']:.1f}%",
+                  help="Lesson 28's risk forecast for the whole mix: how much it may swing, not which way.")
+
+        table = real.assign(
+            share_pct=real["value_eur"] / total * 100,
+            profit_pct=real["profit_eur"] / (real["value_eur"] - real["profit_eur"]) * 100,
+        ).rename(columns={"name": "Name", "value_eur": "Value €", "profit_eur": "Profit €",
+                          "share_pct": "Share %", "profit_pct": "Profit %"})
+        st.dataframe(
+            table.style.format(precision=1).map(
+                lambda v: "color: green" if v > 0 else "color: red" if v < 0 else "",
+                subset=["Profit €", "Profit %"]),
+            width="stretch",
+        )
+
+        st.subheader("Next month's normal range")
+        per_holding, mix, left_out = risk
+        st.write(f"Whole mix: in about **2 months out of 3** the move stays within "
+                 f"**±{mix.iloc[0]['typical_%']:.1f}%**; roughly **1 month in 20** is worse than "
+                 f"**{mix.iloc[0]['bad_%']:.1f}%**. How much it may swing - not which way.")
+        st.dataframe(per_holding.rename(columns={
+            "volatility_%": "Volatility / year %", "typical_%": "Typical month ±%",
+            "bad_%": "Rough bad month %"}).style.format(precision=1), width="stretch")
+        if left_out:
+            st.caption(f"No forecast (too little price history): {', '.join(left_out)}")
+
+        st.subheader("Paper account mirror (Lesson 30)")
+        _, paper_positions, _ = load_account()
+        paper = (paper_positions.set_index("Symbol")["Value $"] if not paper_positions.empty
+                 else pd.Series(dtype=float))
+        status = mirror_status(paper, real["value_eur"])
+        # Holdings with no price data (e.g. Bayer) can't be mirrored automatically (Lesson 30)
+        cant = [x for x in left_out if x in status.index and status.loc[x, "paper_$"] == 0]
+        status.loc[cant, "status"] = "can't mirror"
+        mirrorable = len(real) - len(cant)
+        in_sync = (status["status"] == "in sync").sum()
+        if in_sync == mirrorable and not (status["status"] == "extra").any():
+            st.success(f"All {mirrorable} mirrorable holdings are in sync (within 5%, €1 = $1).")
+        else:
+            st.warning(f"{in_sync} of {mirrorable} holdings in sync. To fix: pause the paper bot, then run "
+                       "`python step30_mirror.py --trade`.")
+        if cant:
+            st.caption(f"Can't be mirrored automatically (no price data): {', '.join(cant)}")
+        st.dataframe(
+            status.rename(columns={"real_$": "Real (€ as $)", "paper_$": "Paper $",
+                                   "difference_$": "Difference $", "status": "Status"})
+            .style.format(precision=2).map(
+                lambda v: "color: green" if v == "in sync" else "color: orange", subset=["Status"]),
+            width="stretch",
+        )

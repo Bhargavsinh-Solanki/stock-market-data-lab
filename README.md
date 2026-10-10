@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **30 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **31 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -23,7 +23,7 @@ It's built as **30 small, heavily commented lessons**, each one adding a new cod
 | **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment (word list and FinBERT AI) vs price moves |
 | **Backtesting & statistics** | Moving-average strategy vs buy & hold, trading costs, train/test split, shuffle (permutation) tests across 12 stocks |
 | **Paper trading** | Market and limit orders, dry-run-first bots (lesson 8, and lesson 27 with a cash check and email summaries) with watchlists and decision logs, a read-only portfolio health check (money vs risk share, effective number of stocks, overlap) |
-| **Dashboard** | Streamlit app with tabs: live-updating intraday chart, account value, positions, bot log, a portfolio health page, and a what-if simulator with sliders |
+| **Dashboard** | Streamlit app with tabs: live-updating intraday chart, account value, positions, bot log, a portfolio health page, a what-if simulator with sliders, and a private real-portfolio tab (profit, risk range, paper-mirror status) |
 | **Daily email** | Facts-only market report: your rule alerts, your holdings' moves, next month's normal range (risk forecast), market and sector overview, headlines |
 | **Engineering** | Shared `helpers` module, unit tests with pytest, CI on GitHub Actions |
 
@@ -176,7 +176,7 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 ├── paper_bot.py              # the paper bot's decision table (buy / hold / sell / stay out)
 ├── risk_forecast.py          # volatility forecasts (windows + EWMA) and walk-forward evaluation
 ├── step1_connect.py … step30_mirror.py   # the lessons (see below)
-├── step11_dashboard.py       # Streamlit dashboard (live: lesson 14, health tab: 21, what-if tab: 22)
+├── step11_dashboard.py       # Streamlit dashboard (live: 14, health: 21, what-if: 22, real portfolio: 31)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
 ├── docs/images/              # charts used in this README
@@ -220,6 +220,7 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 | 28 | `step28_risk_forecast.py` | Forecasting next month's volatility: walk-forward testing, EWMA, risk vs return forecasts |
 | 29 | `report.py` + `risk_forecast.py` | Risk forecast in the daily email: one shared function for two outputs, optional sections, trimming long text |
 | 30 | `step30_mirror.py` | Mirror a real portfolio in the paper account: rebalancing, notional (fractional) orders, per-order error handling |
+| 31 | `portfolio.py` + dashboard | Real-portfolio tab: profit, risk range and mirror status on one page - reusing modules in a UI |
 
 ## Built with
 
