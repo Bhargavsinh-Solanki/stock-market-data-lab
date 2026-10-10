@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **31 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **32 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -23,7 +23,7 @@ It's built as **31 small, heavily commented lessons**, each one adding a new cod
 | **Analysis** | Returns, volatility, max drawdown, moving averages, news volume and headline sentiment (word list and FinBERT AI) vs price moves |
 | **Backtesting & statistics** | Moving-average strategy vs buy & hold, trading costs, train/test split, shuffle (permutation) tests across 12 stocks |
 | **Paper trading** | Market and limit orders, dry-run-first bots (lesson 8, and lesson 27 with a cash check and email summaries) with watchlists and decision logs, a read-only portfolio health check (money vs risk share, effective number of stocks, overlap) |
-| **Dashboard** | Streamlit app with tabs: live-updating intraday chart, account value, positions, bot log, a portfolio health page, a what-if simulator with sliders, and a private real-portfolio tab (profit, risk range, paper-mirror status) |
+| **Dashboard** | Beginner-friendly Streamlit app: a plain-English Home page, your real portfolio (profit, risk range, paper-mirror status), top performers with next month's swing range, live prices, the paper account and a what-if simulator - with explanations and a word list throughout |
 | **Daily email** | Facts-only market report: your rule alerts, your holdings' moves, next month's normal range (risk forecast), market and sector overview, headlines |
 | **Engineering** | Shared `helpers` module, unit tests with pytest, CI on GitHub Actions |
 
@@ -117,7 +117,7 @@ pytest                      # runs the unit tests (no keys needed)
 Open the dashboard:
 
 ```bash
-streamlit run step11_dashboard.py
+python -m streamlit run step11_dashboard.py
 ```
 It opens at http://localhost:8501. Press Ctrl+C in the terminal to stop it.
 
@@ -171,12 +171,13 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 ├── crawler.py                # polite news crawler: RSS, archive, robots.txt, article text
 ├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
 ├── portfolio.py              # portfolio health check + what-if simulator calculations
+├── performers.py             # top performers: past returns + next month's risk range
 ├── report.py                 # daily report: market moves, your rule checks, headlines, HTML
 ├── emailer.py                # sends email over SMTP using settings from .env
 ├── paper_bot.py              # the paper bot's decision table (buy / hold / sell / stay out)
 ├── risk_forecast.py          # volatility forecasts (windows + EWMA) and walk-forward evaluation
 ├── step1_connect.py … step30_mirror.py   # the lessons (see below)
-├── step11_dashboard.py       # Streamlit dashboard (live: 14, health: 21, what-if: 22, real portfolio: 31)
+├── step11_dashboard.py       # Streamlit dashboard (rebuilt for beginners in lesson 32)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
 ├── docs/images/              # charts used in this README
@@ -221,6 +222,7 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 | 29 | `report.py` + `risk_forecast.py` | Risk forecast in the daily email: one shared function for two outputs, optional sections, trimming long text |
 | 30 | `step30_mirror.py` | Mirror a real portfolio in the paper account: rebalancing, notional (fractional) orders, per-order error handling |
 | 31 | `portfolio.py` + dashboard | Real-portfolio tab: profit, risk range and mirror status on one page - reusing modules in a UI |
+| 32 | `performers.py` + dashboard | Top performers and a beginner-friendly redesign: Home summary, explainer boxes, column_config, honest forecasts |
 
 ## Built with
 
@@ -344,6 +346,7 @@ GitHub Actions
 - **Probability**: how sure the model is, from 0% to 100% (e.g. "92% positive").
 - **Mock**: a fake stand-in used in tests (here, a fake FinBERT) so tests are fast and predictable.
 - **Lazy loading**: only loading something heavy at the moment it's first needed.
+- **User experience (UX)**: how easy a program is to understand and use - plain words, tooltips, explanations.
 - **cron**: the Mac/Linux built-in scheduler that runs commands at set times.
 - **Regular expression (regex)**: a pattern for finding text, e.g. `[a-z]+` means "a run of letters".
 - **Bot / dry run / watchlist / log**: a program that trades by itself / a rehearsal that sends nothing / the stocks it may trade / its record of every decision.

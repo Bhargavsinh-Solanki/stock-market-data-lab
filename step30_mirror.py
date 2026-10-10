@@ -29,8 +29,8 @@ import sys
 
 import pandas as pd
 from alpaca.common.exceptions import APIError
-from alpaca.trading.enums import OrderSide, TimeInForce
-from alpaca.trading.requests import MarketOrderRequest
+from alpaca.trading.enums import OrderSide, QueryOrderStatus, TimeInForce
+from alpaca.trading.requests import GetOrdersRequest, MarketOrderRequest
 
 from helpers import trading_client
 from portfolio import rebalance_orders
@@ -51,6 +51,9 @@ client = trading_client()  # paper account, always
 clock = client.get_clock()
 positions = {p.symbol: p for p in client.get_all_positions() if p.asset_class.value == "us_equity"}
 current = pd.Series({s: float(p.market_value) for s, p in positions.items()}, dtype=float)
+# Orders sent earlier that haven't filled yet (e.g. sent at the weekend). The positions
+# above don't include them yet, so planning on top of them would DOUBLE every trade.
+waiting = client.get_orders(GetOrdersRequest(status=QueryOrderStatus.OPEN, limit=500))
 
 # Which target holdings can't be traded automatically?
 problems = {}
@@ -88,6 +91,15 @@ for s, dollars in orders.items():
     print(f"  {s:<6} {what}")
 
 print(f"\nAfter mirroring: ~${target_ok.sum():,.2f} invested; the rest of the paper money stays as cash.")
+
+if waiting:
+    print(f"\n⚠ {len(waiting)} earlier order(s) are still waiting to fill:")
+    for o in waiting:
+        amount = f"${float(o.notional):,.2f}" if o.notional else f"{o.qty} sh"
+        print(f"    {o.side.value:<4} {o.symbol:<6} {amount}")
+    print("  The plan above doesn't include them yet. Wait until they fill (or cancel them with\n"
+          "  'python step7_paper_order.py cancel'), then run this again. Nothing will be sent now.")
+    sys.exit()
 
 if not really_trade:
     print("\nDry run only. Pause the paper bot first (see the top of this file), then add --trade.")
