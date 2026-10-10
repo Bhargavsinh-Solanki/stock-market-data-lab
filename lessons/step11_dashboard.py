@@ -27,6 +27,8 @@ import streamlit as st
 from alpaca.trading.requests import GetPortfolioHistoryRequest
 
 from lab.currency import euro_strength, to_euro_prices
+from lab.dividends import COLUMNS as DIVIDEND_COLUMNS
+from lab.dividends import fetch_cash_dividends, summarise
 from lab.helpers import daily_closes, latest_session_minutes, latest_trade, trading_client
 from lab.performers import PERIODS, POPULAR, top_performers
 from lab.portfolio import health_check, mirror_status, simulate
@@ -95,6 +97,19 @@ def load_performers(symbols, period_days, in_euros=False):
     if in_euros:  # Lesson 33: see the results the way a euro investor experiences them
         closes = to_euro_prices(closes, euro_strength())
     return top_performers(closes, period_days), closes
+
+
+@st.cache_data(ttl=6 * 3600)
+def load_dividends(values):
+    """Dividend summary for your holdings (Lesson 36). `values` = tuple of (symbol, €) pairs."""
+    values = dict(values)
+    try:
+        dividends = fetch_cash_dividends(list(values))
+    except Exception:  # no connection / no data: show the section without numbers
+        dividends = pd.DataFrame(columns=DIVIDEND_COLUMNS)
+    closes = daily_closes(list(values), days=10, keep_gaps=True)
+    prices = {s: closes[s].dropna().iloc[-1] for s in closes.columns if closes[s].notna().any()}
+    return summarise(dividends, prices, values)
 
 
 def load_real():
@@ -175,6 +190,7 @@ with st.sidebar:
 - **Diversified**: money spread over many different things, so one bad one can't sink you.
 - **Correlation**: how much two things move together (1 = always, 0 = unrelated).
 - **Mirror**: the paper account copying your real holdings.
+- **Dividend**: cash a company pays its shareholders, often every 3 months.
 - **Exchange rate (EUR/USD)**: how many dollars one euro buys. When it falls, your US holdings are worth more in euros.
 """)
 
@@ -290,6 +306,37 @@ This is a **risk forecast** - how *much* prices may move, not *which way*.
 - **Typical month**: in about 2 months out of 3, the move stays inside this range.
 - **Rough bad month**: about 1 month in 20 is worse. Real markets can be wilder than this guide.
 - Funds like the S&P 500 swing much less than single companies, because they hold hundreds of them.
+""")
+
+        st.subheader("💵 Dividends: cash your holdings pay out")
+        div = load_dividends(tuple(real["value_eur"].items()))
+        payers = div[div["payments_12m"] > 0]
+        income = div["income_year"].sum()
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Rough yearly income", f"€{income:,.2f}", help="Your amount × each holding's dividend yield, before tax.")
+        c2.metric("Holdings that paid", f"{len(payers)} of {len(div)}")
+        upcoming = div[div["next_is"] != "-"].sort_values("next_date")
+        if len(upcoming):
+            first = upcoming.iloc[0]
+            c3.metric("Next ex-date", f"{upcoming.index[0]} · {first['next_date']:%d %b}",
+                      first["next_is"], delta_color="off", delta_arrow="off")
+        st.dataframe(
+            div.reset_index(names="Stock").assign(
+                next_date=lambda d: d["next_date"].map(lambda x: f"{x:%d %b %Y}" if x else "-"))
+            .rename(columns={"payments_12m": "Paid (last 12 months)", "per_share_12m": "Per share ($)",
+                             "yield_%": "Dividend yield", "income_year": "≈ € a year",
+                             "next_date": "Next ex-date", "next_is": "Next date is"}),
+            hide_index=True, width="stretch",
+            column_config={"Per share ($)": DOLLARS, "Dividend yield": st.column_config.NumberColumn(format="%.2f%%"),
+                           "≈ € a year": EUROS},
+        )
+        explain("""
+- A **dividend** is cash a company pays its shareholders, often every 3 months.
+- **Ex-date**: you must own the share *before* this day to get the next payment.
+  "announced" = already published; "estimate" = guessed from its usual rhythm.
+- **Dividend yield**: a year of dividends ÷ today's price. 2% on €500 ≈ €10 a year.
+- **Before tax**: US companies usually keep 15% for EU residents, and your country may tax it too.
+- **Accumulating ("Acc") ETFs** reinvest dividends instead of paying cash - check your ETF's name.
 """)
 
         st.subheader("Is the paper account a copy of this? (mirror)")

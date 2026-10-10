@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **35 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **36 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -174,13 +174,14 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 │   ├── risk_forecast.py        #   volatility forecasts (windows + EWMA), walk-forward tests
 │   ├── performers.py           #   top performers: past returns + next month's risk range
 │   ├── currency.py             #   euro view: EUR/USD via the FXE fund
+│   ├── dividends.py            #   dividend history, yield, yearly income, next ex-date
 │   ├── crawler.py              #   polite news crawler: RSS, archive, robots.txt, article text
 │   ├── ai_sentiment.py         #   FinBERT sentiment, run locally, with a score cache
 │   ├── report.py / emailer.py  #   daily email report and SMTP sending
 │   └── paper_bot.py            #   the paper bot's decision table
-├── lessons/                    # the lesson scripts, step1_connect.py … step33_euro_view.py
+├── lessons/                    # the lesson scripts, step1_connect.py … step36_dividends.py
 │   └── step11_dashboard.py     #   the Streamlit dashboard
-├── tests/                      # 74 tests on fake data (no internet or keys needed)
+├── tests/                      # 80 tests on fake data (no internet or keys needed)
 ├── pyproject.toml              # describes lab/ as a package ("pip install -e .")
 ├── requirements.txt            # the libraries the project needs
 ├── .github/workflows/          # CI: runs the tests on every push
@@ -231,6 +232,7 @@ Run everything **from the project folder**, e.g. `python lessons/step5_backtest.
 | 33 | `step33_euro_view.py` | Results in euros: exchange rates, splitting a return into company + currency, a € / $ switch on the dashboard |
 | 34 | `tests/test_dashboard.py` | Testing the whole dashboard: AppTest, fake data sources, pytest fixtures, proving a test can fail |
 | 35 | `lab/` + `lessons/` + `pyproject.toml` | Tidying into a Python package: folders, git mv, editable installs, updating every path |
+| 36 | `lessons/step36_dividends.py` | Dividends: corporate actions data, dates and date maths, announced vs estimated, yield and income |
 
 ## Built with
 
@@ -275,6 +277,10 @@ GitHub Actions
 - **Limit order**: buy/sell only at your price or better. You pick the price, but it may never fill.
 - **Position**: a stock you currently own. **Filled**: the order actually happened.
 - **Unrealized profit/loss**: how much a position is up or down on paper, before you sell.
+- **Dividend**: cash a company pays its shareholders, often every 3 months.
+- **Ex-date**: you must own the share before this day to get the next dividend.
+- **Dividend yield**: a year of dividends ÷ today's price.
+- **Accumulating vs distributing ETF**: "Acc" reinvests dividends inside the fund; "Dist" pays them out as cash.
 - **Hindsight**: judging with knowledge of what actually happened; a what-if on past prices isn't a forecast.
 - **ADR**: a US-traded certificate for a foreign company's shares (e.g. Bayer → BAYRY).
 - **IPO / listing**: when a company's shares start trading on a stock exchange; there's no price history before it.

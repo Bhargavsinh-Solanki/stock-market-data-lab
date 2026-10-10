@@ -9,7 +9,6 @@ or API keys (GitHub's automatic tests don't have your keys), so every function t
 to Alpaca is swapped for a FAKE that returns made-up data (monkeypatching, Lesson 24).
 """
 
-import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from lab import currency  # noqa: E402
+from lab import dividends  # noqa: E402
 from lab import helpers  # noqa: E402
 from lab import portfolio  # noqa: E402
 from lab import report  # noqa: E402
@@ -95,6 +95,9 @@ def fake_alpaca(monkeypatch, tmp_path):
     monkeypatch.setattr(helpers, "latest_session_minutes", fake_minutes)
     monkeypatch.setattr(helpers, "latest_trade", fake_latest_trade)
     monkeypatch.setattr(currency, "euro_strength", lambda days=400: fake_daily_closes("FXE", days))
+    monkeypatch.setattr(dividends, "fetch_cash_dividends", lambda symbols, **kw: pd.DataFrame(
+        [("SPY", pd.Timestamp("2026-09-19").date(), pd.Timestamp("2026-10-31").date(), 1.9, False)],
+        columns=dividends.COLUMNS))
 
     pd.DataFrame({"symbol": HOLDINGS, "name": HOLDINGS, "value_eur": [500, 300, 150, 50],
                   "profit_eur": [20, 15, -5, 2]}).to_csv(tmp_path / "my_portfolio.csv", index=False)
@@ -131,6 +134,12 @@ def test_switching_to_dollars_still_works(fake_alpaca):
     app.sidebar.radio[0].set_value("$ dollars").run()  # click the € / $ switch
     assert not app.exception, app.exception
     assert any("(in dollars)" in m.value for m in app.markdown)
+
+
+def test_dividends_section_shows(fake_alpaca):
+    app = run_dashboard()
+    labels = [m.label for m in app.metric]
+    assert "Rough yearly income" in labels and "Holdings that paid" in labels
 
 
 def test_dashboard_works_without_a_portfolio_file(fake_alpaca):
