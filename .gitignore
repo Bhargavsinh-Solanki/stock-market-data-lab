@@ -16,3 +16,6 @@ data/
 
 # Your REAL portfolio - private, never uploaded (see my_portfolio.example.csv)
 my_portfolio.csv
+
+# Created by "pip install -e ." - build information, not source code
+*.egg-info/
