@@ -99,16 +99,20 @@ def monthly_ranges(volatility):
                          "bad_%": -BAD_MONTH_FACTOR * typical})
 
 
-def forecast_holdings(values, method="3 months", min_days=63):
+def forecast_holdings(values, method="3 months", min_days=63, in_euros=False):
     """
     Next month's risk for a set of holdings, e.g. {"NVDA": 593, "SPY": 310}.
     Returns (per-holding ranges, whole-mix ranges as a 1-row table, symbols left out).
     Falls back to EWMA when a holding is too new for `method`.
+    in_euros=True: measure the swings in euros, including the EUR/USD rate (Lesson 33).
     """
     from portfolio import returns_with_history  # imported here: portfolio needs a data download
 
     values = pd.Series(values, dtype=float)
     held, left_out = returns_with_history(values.index, days=400, min_days=min_days)
+    if in_euros:
+        from currency import euro_strength, to_euro_returns
+        held = to_euro_returns(held, euro_strength().pct_change().dropna())
     latest = {name: f.iloc[-1] for name, f in forecasts(held).items()}
     vol = latest[method] if latest[method].notna().all() else latest["EWMA"]
 

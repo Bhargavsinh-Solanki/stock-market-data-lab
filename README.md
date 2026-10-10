@@ -8,7 +8,7 @@ A hands-on learning project that uses the **[Alpaca](https://alpaca.markets) API
 live and historical stock market data, test trading rules honestly, run a paper-trading bot,
 and show it all on a live web dashboard.
 
-It's built as **32 small, heavily commented lessons**, each one adding a new coding idea.
+It's built as **33 small, heavily commented lessons**, each one adding a new coding idea.
 
 > ⚠️ Educational project only. Paper trading (fake money). Not financial advice.
 
@@ -172,11 +172,12 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 ├── ai_sentiment.py           # FinBERT sentiment, run locally, with a score cache
 ├── portfolio.py              # portfolio health check + what-if simulator calculations
 ├── performers.py             # top performers: past returns + next month's risk range
+├── currency.py               # euro view: EUR/USD via the FXE fund, converting $ results into €
 ├── report.py                 # daily report: market moves, your rule checks, headlines, HTML
 ├── emailer.py                # sends email over SMTP using settings from .env
 ├── paper_bot.py              # the paper bot's decision table (buy / hold / sell / stay out)
 ├── risk_forecast.py          # volatility forecasts (windows + EWMA) and walk-forward evaluation
-├── step1_connect.py … step30_mirror.py   # the lessons (see below)
+├── step1_connect.py … step33_euro_view.py   # the lessons (see below)
 ├── step11_dashboard.py       # Streamlit dashboard (rebuilt for beginners in lesson 32)
 ├── tests/                    # unit tests on fake data (no internet or keys needed)
 ├── .github/workflows/        # CI: runs the tests on every push
@@ -223,6 +224,7 @@ To run it every weekday at 16:00 (30 minutes after the US open, Central European
 | 30 | `step30_mirror.py` | Mirror a real portfolio in the paper account: rebalancing, notional (fractional) orders, per-order error handling |
 | 31 | `portfolio.py` + dashboard | Real-portfolio tab: profit, risk range and mirror status on one page - reusing modules in a UI |
 | 32 | `performers.py` + dashboard | Top performers and a beginner-friendly redesign: Home summary, explainer boxes, column_config, honest forecasts |
+| 33 | `step33_euro_view.py` | Results in euros: exchange rates, splitting a return into company + currency, a € / $ switch on the dashboard |
 
 ## Built with
 
@@ -271,6 +273,7 @@ GitHub Actions
 - **ADR**: a US-traded certificate for a foreign company's shares (e.g. Bayer → BAYRY).
 - **IPO / listing**: when a company's shares start trading on a stock exchange; there's no price history before it.
 - **Currency (FX) risk**: if you invest in euros in US-dollar assets, the EUR/USD rate moves your result too.
+- **EUR/USD**: how many dollars one euro buys. Euro down = your US holdings are worth more in euros.
 - **Hedge**: a holding that tends to move against the rest, so it can *reduce* total risk (a negative risk share).
 - **UCITS**: the EU standard for funds; EU investors usually buy UCITS ETFs rather than US-listed ones.
 - **Order fee**: what a platform charges per buy or sell; many small orders can add up to a big share of a small portfolio.

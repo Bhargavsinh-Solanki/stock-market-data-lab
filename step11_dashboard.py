@@ -26,6 +26,7 @@ import pandas as pd
 import streamlit as st
 from alpaca.trading.requests import GetPortfolioHistoryRequest
 
+from currency import euro_strength, to_euro_prices
 from helpers import daily_closes, latest_session_minutes, latest_trade, trading_client
 from performers import PERIODS, POPULAR, top_performers
 from portfolio import health_check, mirror_status, simulate
@@ -69,8 +70,8 @@ def load_health_check():
 
 
 @st.cache_data(ttl=3600)
-def load_risk(values):
-    return forecast_holdings(dict(values))
+def load_risk(values, in_euros=False):
+    return forecast_holdings(dict(values), in_euros=in_euros)
 
 
 @st.cache_data(ttl=3600)
@@ -89,8 +90,10 @@ def load_market():
 
 
 @st.cache_data(ttl=3600)
-def load_performers(symbols, period_days):
+def load_performers(symbols, period_days, in_euros=False):
     closes = daily_closes(list(symbols), days=400, keep_gaps=True)
+    if in_euros:  # Lesson 33: see the results the way a euro investor experiences them
+        closes = to_euro_prices(closes, euro_strength())
     return top_performers(closes, period_days), closes
 
 
@@ -151,6 +154,10 @@ st.caption("A student learning project · the Alpaca account here is PAPER (prac
 
 with st.sidebar:
     st.header("⚙️ Settings")
+    currency = st.radio("Show results in", ["€ euros", "$ dollars"], horizontal=True,
+                        help="You invest in euros, but most holdings are priced in dollars. "
+                             "Euros include the exchange rate - what your broker app shows.")
+    in_euros = currency.startswith("€")
     live_on = st.toggle("Live price updates", value=True, help="Refresh the 📈 Live prices tab every 5 seconds.")
     if st.button("🔄 Refresh all data", width="stretch"):
         st.cache_data.clear()
@@ -168,6 +175,7 @@ with st.sidebar:
 - **Diversified**: money spread over many different things, so one bad one can't sink you.
 - **Correlation**: how much two things move together (1 = always, 0 = unrelated).
 - **Mirror**: the paper account copying your real holdings.
+- **Exchange rate (EUR/USD)**: how many dollars one euro buys. When it falls, your US holdings are worth more in euros.
 """)
 
 real = load_real()
@@ -196,9 +204,9 @@ with home_tab:
 
     if real is not None:
         total, profit = real["value_eur"].sum(), real["profit_eur"].sum()
-        risk = load_risk(tuple(real["value_eur"].items()))
+        risk = load_risk(tuple(real["value_eur"].items()), in_euros)
         typical = risk[1].iloc[0]["typical_%"]
-        perf, _ = load_performers(tuple(real.index), PERIODS["1 month"])
+        perf, _ = load_performers(tuple(real.index), PERIODS["1 month"], in_euros)
 
         st.subheader("Your real portfolio")
         c1, c2, c3 = st.columns(3)
@@ -209,7 +217,7 @@ with home_tab:
 
         best, worst = perf.index[0], perf.index[-1]
         st.markdown(
-            f"- 📅 **This month** your best holding was **{best}** "
+            f"- 📅 **This month** (in {'euros' if in_euros else 'dollars'}) your best holding was **{best}** "
             f"({perf.loc[best, 'return_%']:+.1f}%) and your weakest was **{worst}** "
             f"({perf.loc[worst, 'return_%']:+.1f}%).\n"
             f"- 🎢 In a normal month your whole portfolio moves up or down by up to about "
@@ -262,7 +270,9 @@ with mine_tab:
 """)
 
         st.subheader("How much could each one swing next month?")
-        per_holding, mix, left_out = load_risk(tuple(real["value_eur"].items()))
+        per_holding, mix, left_out = load_risk(tuple(real["value_eur"].items()), in_euros)
+        st.caption(f"Swings measured in {'euros (including the EUR/USD rate)' if in_euros else 'US dollars'} "
+                   "- switch in the sidebar")
         m = mix.iloc[0]
         st.markdown(f"**Your whole portfolio:** in about **2 months out of 3** it moves less than "
                     f"**±{m['typical_%']:.1f}%**. Roughly **1 month in 20** is worse than **{m['bad_%']:.1f}%**.")
@@ -318,7 +328,9 @@ with top_tab:
     period = c2.select_slider("Over the last…", options=list(PERIODS), value="1 month")
     symbols = tuple(real.index) if (group == "My holdings" and real is not None) else tuple(POPULAR)
 
-    perf, closes = load_performers(symbols, PERIODS[period])
+    perf, closes = load_performers(symbols, PERIODS[period], in_euros)
+    st.caption(f"Returns in {'euros - including the exchange rate, like your broker app' if in_euros else 'US dollars'} "
+               "· switch in the sidebar")
     if perf.empty:
         st.info("Not enough price data for this period.")
     else:
@@ -355,6 +367,8 @@ with top_tab:
 - **Return**: how much the price went up or down over the period you picked - a fact about the past.
 - **Next month: typical swing**: the risk forecast. Big winners are often also the bumpiest stocks -
   a +40% month usually comes with big swings in both directions.
+- **€ or $?** In euros, a weaker euro makes US stocks worth more to you, and a stronger euro worth
+  less - so the same stock can show a different return. Switch in the sidebar to compare (Lesson 33).
 - **Why no "will it go up?" forecast?** Lessons 23 and 28 tested that idea on years of data: the order of
   winners and losers kept reshuffling, so a prediction would just be a guess.
 """)
